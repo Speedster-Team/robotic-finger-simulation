@@ -1,4 +1,0 @@
-prepend-non-duplicate;GZ_SIM_RESOURCE_PATH;share/finger_description/models
-prepend-non-duplicate;GZ_SIM_RESOURCE_PATH;share/finger_description/worlds
-prepend-non-duplicate;GZ_SIM_PLUGIN_PATH;share/finger_description/plugins
-prepend-non-duplicate;GZ_SYSTEM_PLUGIN_PATH;share/finger_description/plugins

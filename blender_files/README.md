@@ -1,12 +1,16 @@
 # Onshape URDF Export with Blender
+* RDS Speedster team
+* Spring 2026
+#### Credit: Powerhouse team - Cole Abbott, Heinrich Asbury, Jared Berry, Evan Bulatek, and Benji Sobeloff-Gittes
 
-I used this code and method created by the powerhouse team to import my onshape cad into a urdf.
+## Description
+This method (created by the powerhouse team) can import onshape cad into a urdf for RDS robotic fingers.
 
-#### Authors: Cole Abbott, Heinrich Asbury, Jared Berry, Evan Bulatek, and Benji Sobeloff-Gittes
+No modifications to the original Onshape CAD were required for this approach. All elements were grouped into one of the 5 links.
 
+## Instructions
 This is a method that uses Blender to generate a URDF from a robot assembly created in Onshape.
 
-#### Instructions
 1. Export full assembly from onshape as STL file
 2. Import as STL to blender
 3. Click on full STL -> `Edit mode -> A -> P -> Separate by loose parts`
@@ -38,3 +42,10 @@ The visual geometry in rviz
 
 ![](image/col_rviz.png)
 The collision geometry in rviz
+
+## AI usage
+AI was used heavily in writing the code to export from blender to urdf. 
+
+I fed back errors to Claude until the export code was in a state where I could debug myself (origin misplacement or other visualization errors).
+
+

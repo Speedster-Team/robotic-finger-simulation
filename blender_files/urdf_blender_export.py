@@ -2,11 +2,6 @@ import bpy
 import os
 import mathutils
 
-#
-# The following uses the powerhouse finger as an example, change the joints
-# and links to match your robot.
-#
-
 # ── Config ────────────────────────────────────────────────────────────────────
 
 MESHES_DIR    = "/home/michael-jenz/rds_ws/finger_vizualization/src/drake-finger-sim/finger_description/meshes"
@@ -22,8 +17,7 @@ os.makedirs(COLLISION_DIR, exist_ok=True)
 os.makedirs(os.path.dirname(URDF_PATH), exist_ok=True)
 
 # ── Kinematic tree ────────────────────────────────────────────────────────────
-# Define the URDF structure
-# Each entry: joint_name, joint_type, parent_link, child_link, limits, dynamics
+
 JOINTS = [
     {
         "name":     "mcp_splay",
@@ -36,14 +30,14 @@ JOINTS = [
         "velocity": 3.14,
         "damping":  0.1,
         "friction": 0.0,
-        "empty":    "mcp_splay",   # name of the ARROWS empty in Blender
+        "empty":    "mcp_splay",
     },
     {
         "name":     "mcp_flexion",
         "type":     "revolute",
         "parent":   "mcp_link",
         "child":    "proximal_phalanx",
-        "lower":    0.0,
+        "lower":    0,
         "upper":    1.570,
         "effort":   5.0,
         "velocity": 3.14,
@@ -80,43 +74,12 @@ JOINTS = [
     },
 ]
 
-# Links in order. mesh=True means use STL, mesh=False means primitive (virtual link)
 LINKS = [
-    {
-        "name":    "base_link",
-        "mesh":    True,
-        "mass":    0.05,
-        "inertia": (1e-5, 1e-5, 1e-5),
-        "comment": "Finger base",
-    },
-    {
-        "name":    "mcp_link",
-        "mesh":    True,
-        "mass":    0.01,
-        "inertia": (1e-5, 1e-5, 1e-5),
-        "comment": "Space between MCP splay and flexion",
-    },
-    {
-        "name":    "proximal_phalanx",
-        "mesh":    True,
-        "mass":    0.01,
-        "inertia": (1e-5, 1e-5, 1e-5),
-        "comment": "Proximal phalanx",
-    },
-    {
-        "name":    "middle_phalanx",
-        "mesh":    True,
-        "mass":    0.008,
-        "inertia": (5e-6, 5e-6, 5e-6),
-        "comment": "Middle phalanx",
-    },
-    {
-        "name":    "distal_phalanx",
-        "mesh":    True,
-        "mass":    0.005,
-        "inertia": (2e-6, 2e-6, 2e-6),
-        "comment": "Distal phalanx",
-    },
+    {"name": "base_link",        "mesh": True, "mass": 0.05,  "inertia": (1e-5, 1e-5, 1e-5), "comment": "Finger base"},
+    {"name": "mcp_link",         "mesh": True, "mass": 0.01,  "inertia": (1e-5, 1e-5, 1e-5), "comment": "Space between MCP splay and flexion"},
+    {"name": "proximal_phalanx", "mesh": True, "mass": 0.01,  "inertia": (1e-5, 1e-5, 1e-5), "comment": "Proximal phalanx"},
+    {"name": "middle_phalanx",   "mesh": True, "mass": 0.008, "inertia": (5e-6, 5e-6, 5e-6), "comment": "Middle phalanx"},
+    {"name": "distal_phalanx",   "mesh": True, "mass": 0.005, "inertia": (2e-6, 2e-6, 2e-6), "comment": "Distal phalanx"},
 ]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -128,13 +91,12 @@ def snap(v):
     return round(v, 4)
 
 def get_empty_data(name):
-    """Return (origin_xyz, axis_xyz) from a named Empty in the joint_axes collection."""
     obj = bpy.data.objects.get(name)
     if obj is None or obj.type != 'EMPTY':
         print(f"  WARNING: Empty '{name}' not found, using zeros")
         return (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)
     loc  = obj.matrix_world.translation
-    axis = obj.matrix_world.to_3x3().col[2].normalized()   # Get forward axis on empty obj
+    axis = obj.matrix_world.to_3x3().col[2].normalized()
     origin = tuple(round(c, 4) for c in loc)
     axis   = tuple(snap(c) for c in axis)
     return origin, axis
@@ -163,31 +125,13 @@ for obj in bpy.data.objects:
         skipped.append(f"{obj.name} (not in visual or collision collection)")
         continue
 
-    # Temporarily zero the world transform so vertices export in the link's local frame
-    # For some reason this is required by URDF? Couldn't think of a better way to do this
-    # saved_matrix = obj.matrix_world.copy()
-    # obj.matrix_world = mathutils.Matrix.Identity(4)
+    saved_matrix = obj.matrix_world.copy()
+    obj.matrix_world = mathutils.Matrix.Identity(4)
 
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
-
-    # Duplicate cleanly
-    bpy.ops.object.duplicate()
-    dup = bpy.context.active_object
-
-    # Apply scale on duplicate to fix normals
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-
-    # Zero the transform
-    dup.matrix_world = mathutils.Matrix.Identity(4)
-
-    # Export the duplicate
-    filepath = os.path.join(out_dir, f"{obj.name}.obj")  # use original obj.name before it goes stale
-    dup.select_set(True)
-    bpy.context.view_layer.objects.active = dup
+    filepath = os.path.join(out_dir, f"{obj.name}.obj")
     bpy.ops.wm.obj_export(
         filepath=filepath,
         export_selected_objects=True,
@@ -195,20 +139,17 @@ for obj in bpy.data.objects:
         export_materials=False,
         forward_axis='Y',
         up_axis='Z',
-        export_smooth_groups=False,      # add this
-        export_normals=True,             # add this - explicitly include normals
+        export_smooth_groups=False,
+        export_normals=True,
         export_triangulated_mesh=True,
     )
 
-    # Delete the duplicate
-    bpy.data.objects.remove(dup, do_unlink=True)
-
-    # Restore original (no longer need to restore matrix since we didn't touch it)
+    obj.select_set(False)
+    obj.matrix_world = saved_matrix
     exported.append(f"{obj.name} → {out_dir}")
 
 # ── Joint axes YAML ───────────────────────────────────────────────────────────
 
-# Build a lookup of joint name -> parent joint name for relative transform calculation
 joint_parent_map = {}
 link_to_parent_joint = {}
 for j in JOINTS:
@@ -219,30 +160,24 @@ for j in JOINTS:
     if parent_link in link_to_parent_joint:
         joint_parent_map[j["name"]] = link_to_parent_joint[parent_link]
     else:
-        joint_parent_map[j["name"]] = None  # root joint, already relative to base
+        joint_parent_map[j["name"]] = None
 
-# Build axes_data with relative origins
 axes_data = {}
-
-# First pass: get all world positions of joints
 world_data = {}
 for j in JOINTS:
     origin, axis = get_empty_data(j["empty"])
     world_data[j["name"]] = {"origin": origin, "axis": axis}
 
-# Second pass: subtract parent joint world position
 for j in JOINTS:
-    name = j["name"]
+    name     = j["name"]
     w_origin = world_data[name]["origin"]
-    axis = world_data[name]["axis"]
-
+    axis     = world_data[name]["axis"]
     parent_joint = joint_parent_map[name]
     if parent_joint is not None:
-        p_origin = world_data[parent_joint]["origin"]
+        p_origin   = world_data[parent_joint]["origin"]
         rel_origin = tuple(round(w_origin[i] - p_origin[i], 4) for i in range(3))
     else:
-        rel_origin = w_origin  # Root joint origin is already in base_link frame
-
+        rel_origin = w_origin
     axes_data[name] = {"origin": rel_origin, "axis": axis}
 
 with open(AXES_FILE, 'w') as f:
@@ -269,12 +204,12 @@ with open(AXES_FILE, 'w') as f:
 # ── URDF generation ───────────────────────────────────────────────────────────
 
 def link_block(link):
-    name    = link["name"]
-    mass    = link["mass"]
+    name          = link["name"]
+    mass          = link["mass"]
     ixx, iyy, izz = link["inertia"]
-    comment = link["comment"]
-    pkg     = PACKAGE_NAME
-    lines   = []
+    comment       = link["comment"]
+    pkg           = PACKAGE_NAME
+    lines         = []
 
     lines.append(f'  <!-- {comment} -->')
     lines.append(f'  <link name="{name}">')
@@ -290,7 +225,6 @@ def link_block(link):
         lines.append(f'        <mesh filename="package://{pkg}/meshes/collision/col_{name}.obj"/>')
         lines.append(f'      </geometry>')
         lines.append(f'    </collision>')
-    # virtual links (mcp_link etc.) have no visual/collision
 
     lines.append(f'    <inertial>')
     lines.append(f'      <mass value="{mass}"/>')
@@ -302,9 +236,9 @@ def link_block(link):
     return '\n'.join(lines)
 
 def joint_block(joint):
-    name   = joint["name"]
-    o, a   = axes_data[name]["origin"], axes_data[name]["axis"]
-    lines  = []
+    name  = joint["name"]
+    o, a  = axes_data[name]["origin"], axes_data[name]["axis"]
+    lines = []
 
     lines.append(f'  <!-- {name.replace("_", " ").title()} -->')
     lines.append(f'  <joint name="{name}" type="{joint["type"]}">')
@@ -324,17 +258,15 @@ def joint_block(joint):
     lines.append(f'  </joint>')
     return '\n'.join(lines)
 
-# Build link lookup for ordering: emit link, then its outgoing joint
 link_to_joint = {j["parent"]: j for j in JOINTS}
 
 urdf_lines = []
 urdf_lines.append('<?xml version="1.0"?>')
 urdf_lines.append(f'<robot name="{ROBOT_NAME}">')
 urdf_lines.append('')
-urdf_lines.append(f'  <!-- Generated by urdf_blender_export.py from Blender scene {bpy.data.filepath} -->')
+urdf_lines.append(f'  <!-- Generated by blender_export.py from {bpy.data.filepath} -->')
 urdf_lines.append('')
 
-# Materials
 materials = [
     ("blue",   "0 0 1 1"),
     ("green",  "0 1 0 1"),
@@ -349,7 +281,6 @@ for mat_name, rgba in materials:
     urdf_lines.append(f'  </material>')
 urdf_lines.append('')
 
-# Interleave links and joints in kinematic order
 for link in LINKS:
     urdf_lines.append(link_block(link))
     urdf_lines.append('')
