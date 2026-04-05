@@ -1,0 +1,33 @@
+<!-- Launch the example world and spawn an example urdf file-->
+<launch>
+  <arg name="use_gui" default="True" description="Run the gazebo gui" />
+
+  <gz_server
+      world_sdf_string="ddrive_world"
+      world_sdf_file="ddrive.world.sdf"
+      create_own_container="True"
+      use_composition="True" />
+
+  <gz_spawn_model
+      world=""
+      file="$(find-pkg-share finger_description)/sdf/finger.sdf"
+      model_string=""
+      topic=""
+      entity_name=""
+      allow_renaming="False"
+      x="-1.0"
+      y="-1.0"
+      z="1.0"
+      roll=""
+      pitch=""
+      yaw="" />
+
+  <ros_gz_bridge
+      use_composition="True"
+      bridge_name="bridge"
+      config_file="$(find-pkg-share finger_description)/launch/bridge.yaml"/>
+  
+  <include file="$(find-pkg-share finger_description)/launch/fingerviz.launch.xml"/>
+  
+  <executable cmd="gz sim -g" if="$(var use_gui)" on_exit="shutdown" />
+</launch>

@@ -1,0 +1,3 @@
+{
+    "hooks": ["share/finger_description/env-hooks/diff_drive.dsv"]
+}
