@@ -5,6 +5,6 @@
 
   <node pkg="joint_state_publisher_gui" exec="joint_state_publisher_gui"/>   
 
-  <node pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share finger_description)/config/config.rviz"/>                         
+  <node pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share finger_description)/config/config.rviz" on_exit="shutdown" />                         
 
 </launch>

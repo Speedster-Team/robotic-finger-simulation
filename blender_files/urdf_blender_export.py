@@ -10,7 +10,7 @@ import mathutils
 # ── Config ────────────────────────────────────────────────────────────────────
 
 MESHES_DIR    = "/home/michael-jenz/rds_ws/finger_vizualization/src/drake-finger-sim/finger_description/meshes"
-URDF_PATH     = "/home/michael-jenz/rds_ws/finger_vizualization/src/drake-finger-sim/finger_description/urdf/finger.urdf.xacro"
+URDF_PATH     = "/home/michael-jenz/rds_ws/finger_vizualization/src/drake-finger-sim/finger_description/urdf/finger.urdf"
 VISUAL_DIR    = os.path.join(MESHES_DIR, "visual")
 COLLISION_DIR = os.path.join(MESHES_DIR, "collision")
 AXES_FILE     = os.path.join(MESHES_DIR, "joint_axes.yaml")
@@ -35,7 +35,7 @@ JOINTS = [
         "effort":   5.0,
         "velocity": 3.14,
         "damping":  0.1,
-        "friction": 0.05,
+        "friction": 0.0,
         "empty":    "mcp_splay",   # name of the ARROWS empty in Blender
     },
     {
@@ -48,7 +48,7 @@ JOINTS = [
         "effort":   5.0,
         "velocity": 3.14,
         "damping":  0.1,
-        "friction": 0.05,
+        "friction": 0.0,
         "empty":    "mcp_flex",
     },
     {
@@ -61,7 +61,7 @@ JOINTS = [
         "effort":   5.0,
         "velocity": 3.14,
         "damping":  0.1,
-        "friction": 0.05,
+        "friction": 0.0,
         "empty":    "pip_flex",
     },
     {
@@ -74,7 +74,7 @@ JOINTS = [
         "effort":   3.0,
         "velocity": 3.14,
         "damping":  0.1,
-        "friction": 0.05,
+        "friction": 0.0,
         "empty":    "dip_flex",
         "mimic":    {"joint": "pip_flexion", "multiplier": "0.85", "offset": 0.0},
     },
@@ -165,23 +165,45 @@ for obj in bpy.data.objects:
 
     # Temporarily zero the world transform so vertices export in the link's local frame
     # For some reason this is required by URDF? Couldn't think of a better way to do this
-    saved_matrix = obj.matrix_world.copy()
-    obj.matrix_world = mathutils.Matrix.Identity(4)
+    # saved_matrix = obj.matrix_world.copy()
+    # obj.matrix_world = mathutils.Matrix.Identity(4)
 
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
-    filepath = os.path.join(out_dir, f"{obj.name}.stl")
-    bpy.ops.wm.stl_export(
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+
+    # Duplicate cleanly
+    bpy.ops.object.duplicate()
+    dup = bpy.context.active_object
+
+    # Apply scale on duplicate to fix normals
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+    # Zero the transform
+    dup.matrix_world = mathutils.Matrix.Identity(4)
+
+    # Export the duplicate
+    filepath = os.path.join(out_dir, f"{obj.name}.obj")  # use original obj.name before it goes stale
+    dup.select_set(True)
+    bpy.context.view_layer.objects.active = dup
+    bpy.ops.wm.obj_export(
         filepath=filepath,
         export_selected_objects=True,
         global_scale=1.0,
-        use_scene_unit=True,
-        ascii_format=False,
+        export_materials=False,
+        forward_axis='Y',
+        up_axis='Z',
+        export_smooth_groups=False,      # add this
+        export_normals=True,             # add this - explicitly include normals
+        export_triangulated_mesh=True,
     )
 
-    obj.select_set(False)
-    obj.matrix_world = saved_matrix  # restore
+    # Delete the duplicate
+    bpy.data.objects.remove(dup, do_unlink=True)
+
+    # Restore original (no longer need to restore matrix since we didn't touch it)
     exported.append(f"{obj.name} → {out_dir}")
 
 # ── Joint axes YAML ───────────────────────────────────────────────────────────
@@ -260,12 +282,12 @@ def link_block(link):
     if link["mesh"]:
         lines.append(f'    <visual>')
         lines.append(f'      <geometry>')
-        lines.append(f'        <mesh filename="package://{pkg}/meshes/visual/{name}.stl"/>')
+        lines.append(f'        <mesh filename="package://{pkg}/meshes/visual/{name}.obj"/>')
         lines.append(f'      </geometry>')
         lines.append(f'    </visual>')
         lines.append(f'    <collision>')
         lines.append(f'      <geometry>')
-        lines.append(f'        <mesh filename="package://{pkg}/meshes/collision/col_{name}.stl"/>')
+        lines.append(f'        <mesh filename="package://{pkg}/meshes/collision/col_{name}.obj"/>')
         lines.append(f'      </geometry>')
         lines.append(f'    </collision>')
     # virtual links (mcp_link etc.) have no visual/collision
