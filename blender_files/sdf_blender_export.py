@@ -31,12 +31,6 @@ os.makedirs(COLLISION_DIR, exist_ok=True)
 os.makedirs(os.path.dirname(SDF_PATH), exist_ok=True)
 
 # ── Kinematic tree ──────────────────────────────────────────────────────────────
-#
-# JOINTS defines ALL joints, including the loop-closing dip_flex2.
-# Each entry's "empty" key is the name of the ARROWS empty in Blender.
-#
-# "mimic" is omitted for the four-bar — the coupler constraint is enforced
-# geometrically by the closed loop itself.
 
 JOINTS = [
     {
@@ -76,7 +70,7 @@ JOINTS = [
         "velocity": 3.14,
         "damping":  0.1,
         "friction": 0.05,
-        "empty":    "pip_flex1",   # ARROWS empty in Blender for this joint
+        "empty":    "pip_flex1",
     },
     {
         "name":     "pip_flex2",
@@ -104,23 +98,21 @@ JOINTS = [
         "friction": 0.05,
         "empty":    "dip_flex1",
     },
-    {
-        "name":     "dip_flex2",
-        "type":     "revolute",
-        "parent":   "middle_phalanx2",
-        "child":    "distal_phalanx",   # closes the four-bar loop
-        "lower":    0.0,
-        "upper":    1.570,
-        "effort":   3.0,
-        "velocity": 3.14,
-        "damping":  0.1,
-        "friction": 0.05,
-        "empty":    "dip_flex2",
-    },
+    # {
+    #     "name":     "dip_flex2",
+    #     "type":     "revolute",
+    #     "parent":   "middle_phalanx2",
+    #     "child":    "distal_phalanx",
+    #     "lower":    0.0,
+    #     "upper":    1.570,
+    #     "effort":   3.0,
+    #     "velocity": 3.14,
+    #     "damping":  0.1,
+    #     "friction": 0.05,
+    #     "empty":    "dip_flex2",
+    # },
 ]
 
-# Links in kinematic order.
-# middle_phalanx is split into two coupler links for the four-bar.
 LINKS = [
     {
         "name":    "base_link",
@@ -166,24 +158,13 @@ LINKS = [
     },
 ]
 
-# ── Explicit kinematic tree for relative-origin computation ────────────────────
-#
-# Maps each joint to the joint whose frame defines its parent link's origin.
-# This is the SPANNING TREE of the kinematic graph — the loop-closing joint
-# (dip_flex2) is included but traced back through its parent link's attaching
-# joint (pip_flex2).
-#
-# Rule: KINEMATIC_TREE[joint] = the joint whose child is joint's parent link.
-#        None for root joints (parent = base_link).
-
 KINEMATIC_TREE = {
-    "mcp_splay":   None,           # base_link is at model origin
-    "mcp_flexion": "mcp_splay",    # mcp_link created by mcp_splay
-    "pip_flex1":   "mcp_flexion",  # proximal_phalanx created by mcp_flexion
-    "pip_flex2":   "mcp_flexion",  # same parent link, branching joint
-    "dip_flex1":   "pip_flex1",    # middle_phalanx1 created by pip_flex1
-    "dip_flex2":   "pip_flex2",    # middle_phalanx2 created by pip_flex2
-                                   # ↑ dip_flex2 closes the loop to distal_phalanx
+    "mcp_splay":   None,
+    "mcp_flexion": "mcp_splay",
+    "pip_flex1":   "mcp_flexion",
+    "pip_flex2":   "mcp_flexion",
+    "dip_flex1":   "pip_flex1",
+    "dip_flex2":   "pip_flex2",
 }
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -195,7 +176,6 @@ def snap(v):
     return round(v, 4)
 
 def get_empty_data(name):
-    """Return (origin_xyz, axis_xyz) from a named Empty in the Blender scene."""
     obj = bpy.data.objects.get(name)
     if obj is None or obj.type != 'EMPTY':
         print(f"  WARNING: Empty '{name}' not found, using zeros")
@@ -207,7 +187,6 @@ def get_empty_data(name):
     return origin, axis
 
 def fmt_pose(xyz, rpy=(0, 0, 0)):
-    """Format an SDF <pose> string: 'x y z r p y'"""
     return f"{xyz[0]} {xyz[1]} {xyz[2]} {rpy[0]} {rpy[1]} {rpy[2]}"
 
 def fmt_inertia_sdf(ixx, iyy, izz):
@@ -216,6 +195,9 @@ def fmt_inertia_sdf(ixx, iyy, izz):
             f"<iyy>{f(iyy)}</iyy><iyz>0</iyz><izz>{f(izz)}</izz>")
 
 # ── Mesh export ────────────────────────────────────────────────────────────────
+# - All meshes exported as .obj (Drake doesn't support .stl for collision)
+# - forward_axis='Y', up_axis='Z' prevents 90° X rotation from Blender→URDF axis swap
+# - export_triangulated_mesh=True fixes holes from Drake mishandling quads/ngons
 
 bpy.ops.object.select_all(action='DESELECT')
 exported = []
@@ -241,66 +223,51 @@ for obj in bpy.data.objects:
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
-    filepath = os.path.join(out_dir, f"{obj.name}.stl")
-    bpy.ops.wm.stl_export(
+    filepath = os.path.join(out_dir, f"{obj.name}.obj")
+    bpy.ops.wm.obj_export(
         filepath=filepath,
         export_selected_objects=True,
         global_scale=1.0,
-        use_scene_unit=True,
-        ascii_format=False,
+        export_materials=False,
+        forward_axis='Y',
+        up_axis='Z',
+        export_smooth_groups=False,
+        export_normals=True,
+        export_triangulated_mesh=True,
     )
 
     obj.select_set(False)
     obj.matrix_world = saved_matrix
     exported.append(f"{obj.name} → {out_dir}")
 
-# ── Joint axes: world positions from Blender ───────────────────────────────────
+# ── Joint axes ─────────────────────────────────────────────────────────────────
 
 world_data = {}
 for j in JOINTS:
     origin, axis = get_empty_data(j["empty"])
     world_data[j["name"]] = {"origin": origin, "axis": axis}
 
-# ── Relative joint origins ─────────────────────────────────────────────────────
-#
-# For SDF joints with <pose relative_to="parent_link">, the origin must be
-# expressed in the parent link's local frame.
-#
-# Parent link frame origin = world position of the joint that CREATED the
-# parent link (i.e., KINEMATIC_TREE[joint]).  For root joints the parent
-# link is base_link whose frame is at the model/world origin.
-
 axes_data = {}
-
 for j in JOINTS:
-    name = j["name"]
+    name     = j["name"]
     w_origin = world_data[name]["origin"]
     axis     = world_data[name]["axis"]
 
     parent_joint = KINEMATIC_TREE[name]
     if parent_joint is not None:
-        p_origin = world_data[parent_joint]["origin"]
+        p_origin   = world_data[parent_joint]["origin"]
         rel_origin = tuple(round(w_origin[i] - p_origin[i], 4) for i in range(3))
     else:
-        rel_origin = w_origin   # root joint: already in base_link frame
+        rel_origin = w_origin
 
     axes_data[name] = {"origin": rel_origin, "axis": axis, "world": w_origin}
 
 # ── Link world poses ───────────────────────────────────────────────────────────
-#
-# SDF requires each link's pose in the model frame.
-# A link's world pose = the world position of the joint that created it
-# (because the joint frame and child link frame coincide in rest config).
-# base_link is at the model origin.
 
-# Build map: link_name → joint_that_created_it (the joint whose child = link)
 link_creator_joint = {}
 for j in JOINTS:
     child = j["child"]
     if child not in link_creator_joint:
-        # First time seeing this child is the spanning-tree joint for it.
-        # For the loop-closing joint (dip_flex2 also writes distal_phalanx),
-        # we keep the FIRST assignment (dip_flex1 in tree order).
         link_creator_joint[child] = j["name"]
 
 link_world_poses = {"base_link": (0.0, 0.0, 0.0)}
@@ -315,7 +282,7 @@ for link in LINKS:
         print(f"  WARNING: No creator joint found for link '{name}', using origin")
         link_world_poses[name] = (0.0, 0.0, 0.0)
 
-# ── YAML axes file (unchanged format, extended for new joints) ─────────────────
+# ── YAML axes file ─────────────────────────────────────────────────────────────
 
 with open(AXES_FILE, 'w') as f:
     f.write("# Joint axes extracted from Blender (four-bar linkage SDF version)\n")
@@ -334,12 +301,12 @@ with open(AXES_FILE, 'w') as f:
 # ── SDF generation ─────────────────────────────────────────────────────────────
 
 def link_block_sdf(link):
-    name    = link["name"]
-    mass    = link["mass"]
+    name          = link["name"]
+    mass          = link["mass"]
     ixx, iyy, izz = link["inertia"]
-    comment = link["comment"]
-    pkg     = PACKAGE_NAME
-    pose    = link_world_poses.get(name, (0.0, 0.0, 0.0))
+    comment       = link["comment"]
+    pkg           = PACKAGE_NAME
+    pose          = link_world_poses.get(name, (0.0, 0.0, 0.0))
 
     lines = []
     lines.append(f'    <!-- {comment} -->')
@@ -347,24 +314,21 @@ def link_block_sdf(link):
     lines.append(f'      <pose>{fmt_pose(pose)}</pose>')
 
     if link["mesh"]:
-        # Visual
         lines.append(f'      <visual name="visual">')
         lines.append(f'        <geometry>')
         lines.append(f'          <mesh>')
-        lines.append(f'            <uri>package://{pkg}/meshes/visual/{name}.stl</uri>')
+        lines.append(f'            <uri>package://{pkg}/meshes/visual/{name}.obj</uri>')
         lines.append(f'          </mesh>')
         lines.append(f'        </geometry>')
         lines.append(f'      </visual>')
-        # Collision
         lines.append(f'      <collision name="collision">')
         lines.append(f'        <geometry>')
         lines.append(f'          <mesh>')
-        lines.append(f'            <uri>package://{pkg}/meshes/collision/col_{name}.stl</uri>')
+        lines.append(f'            <uri>package://{pkg}/meshes/collision/col_{name}.obj</uri>')
         lines.append(f'          </mesh>')
         lines.append(f'        </geometry>')
         lines.append(f'      </collision>')
 
-    # Inertial
     lines.append(f'      <inertial>')
     lines.append(f'        <mass>{mass}</mass>')
     lines.append(f'        <inertia>{fmt_inertia_sdf(ixx, iyy, izz)}</inertia>')
@@ -383,15 +347,10 @@ def joint_block_sdf(joint):
     lines = []
     lines.append(f'    <!-- {name.replace("_", " ").title()} -->')
     lines.append(f'    <joint name="{name}" type="{joint["type"]}">')
-
-    # Pose expressed in parent link frame — matches URDF <origin> semantics.
     lines.append(f'      <pose relative_to="{parent}">{fmt_pose(o)}</pose>')
     lines.append(f'      <parent>{parent}</parent>')
     lines.append(f'      <child>{joint["child"]}</child>')
-
     lines.append(f'      <axis>')
-    # expressed_in="__model__" keeps axis direction in world frame,
-    # which equals the joint frame here since rpy is always 0.
     lines.append(f'        <xyz expressed_in="__model__">{a[0]} {a[1]} {a[2]}</xyz>')
     lines.append(f'        <limit>')
     lines.append(f'          <lower>{joint["lower"]}</lower>')
@@ -404,15 +363,10 @@ def joint_block_sdf(joint):
     lines.append(f'          <friction>{joint["friction"]}</friction>')
     lines.append(f'        </dynamics>')
     lines.append(f'      </axis>')
-
     lines.append(f'    </joint>')
+
     return '\n'.join(lines)
 
-
-# Build joint lookup by parent link for ordering
-link_to_outgoing_joints = {}
-for j in JOINTS:
-    link_to_outgoing_joints.setdefault(j["parent"], []).append(j)
 
 sdf_lines = []
 sdf_lines.append('<?xml version="1.0"?>')
@@ -423,9 +377,6 @@ sdf_lines.append(f'  <!-- Generated by blender_export_sdf.py from {bpy.data.file
 sdf_lines.append(f'  <!-- Four-bar linkage: proximal_phalanx + middle_phalanx1/2 + distal_phalanx -->')
 sdf_lines.append(f'  <!-- Loop-closing joint: dip_flex2 (middle_phalanx2 → distal_phalanx) -->')
 sdf_lines.append('')
-
-# Emit all links first, then all joints.
-# SDF does not require interleaving — separate blocks are cleaner for closed loops.
 
 sdf_lines.append('    <!-- ═══════════════ LINKS ═══════════════ -->')
 sdf_lines.append('')

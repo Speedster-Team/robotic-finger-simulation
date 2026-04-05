@@ -7,11 +7,6 @@
   <!-- Loop-closing joint: dip_flex2 (middle_phalanx2 → distal_phalanx) -->
 
     <!-- ═══════════════ LINKS ═══════════════ -->
-    <!-- Stationary link -->
-    <joint name="world_fixed" type="fixed">
-      <parent>world</parent>
-      <child>base_link</child>
-    </joint>
 
     <!-- Finger base -->
     <link name="base_link">
@@ -19,14 +14,14 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/visual/base_link.stl</uri>
+            <uri>package://finger_description/meshes/visual/base_link.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/collision/col_base_link.stl</uri>
+            <uri>package://finger_description/meshes/collision/col_base_link.obj</uri>
           </mesh>
         </geometry>
       </collision>
@@ -42,14 +37,14 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/visual/mcp_link.stl</uri>
+            <uri>package://finger_description/meshes/visual/mcp_link.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/collision/col_mcp_link.stl</uri>
+            <uri>package://finger_description/meshes/collision/col_mcp_link.obj</uri>
           </mesh>
         </geometry>
       </collision>
@@ -65,14 +60,14 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/visual/proximal_phalanx.stl</uri>
+            <uri>package://finger_description/meshes/visual/proximal_phalanx.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/collision/col_proximal_phalanx.stl</uri>
+            <uri>package://finger_description/meshes/collision/col_proximal_phalanx.obj</uri>
           </mesh>
         </geometry>
       </collision>
@@ -88,14 +83,14 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/visual/middle_phalanx1.stl</uri>
+            <uri>package://finger_description/meshes/visual/middle_phalanx1.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/collision/col_middle_phalanx1.stl</uri>
+            <uri>package://finger_description/meshes/collision/col_middle_phalanx1.obj</uri>
           </mesh>
         </geometry>
       </collision>
@@ -106,19 +101,19 @@
     </link>
 
     <!-- Middle phalanx 2 (four-bar coupler, volar) -->
-    <!-- <link name="middle_phalanx2">
+    <link name="middle_phalanx2">
       <pose>-0.0019 0.1065 0.0191 0 0 0</pose>
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/visual/middle_phalanx2.stl</uri>
+            <uri>package://finger_description/meshes/visual/middle_phalanx2.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/collision/col_middle_phalanx2.stl</uri>
+            <uri>package://finger_description/meshes/collision/col_middle_phalanx2.obj</uri>
           </mesh>
         </geometry>
       </collision>
@@ -126,7 +121,7 @@
         <mass>0.008</mass>
         <inertia><ixx>5e-06</ixx><ixy>0</ixy><ixz>0</ixz><iyy>5e-06</iyy><iyz>0</iyz><izz>5e-06</izz></inertia>
       </inertial>
-    </link> -->
+    </link>
 
     <!-- Distal phalanx -->
     <link name="distal_phalanx">
@@ -134,14 +129,14 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/visual/distal_phalanx.stl</uri>
+            <uri>package://finger_description/meshes/visual/distal_phalanx.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>model://Finger/meshes/collision/col_distal_phalanx.stl</uri>
+            <uri>package://finger_description/meshes/collision/col_distal_phalanx.obj</uri>
           </mesh>
         </geometry>
       </collision>
@@ -214,7 +209,7 @@
     </joint>
 
     <!-- Pip Flex2 -->
-    <!-- <joint name="pip_flex2" type="revolute">
+    <joint name="pip_flex2" type="revolute">
       <pose relative_to="proximal_phalanx">-0.0033 0.0691 0.0021 0 0 0</pose>
       <parent>proximal_phalanx</parent>
       <child>middle_phalanx2</child>
@@ -231,7 +226,7 @@
           <friction>0.05</friction>
         </dynamics>
       </axis>
-    </joint> -->
+    </joint>
 
     <!-- Dip Flex1 -->
     <joint name="dip_flex1" type="revolute">
@@ -252,26 +247,6 @@
         </dynamics>
       </axis>
     </joint>
-
-    <!-- Dip Flex2 -->
-    <!-- <joint name="dip_flex2" type="revolute">
-      <pose relative_to="middle_phalanx2">0.0001 0.0348 -0.0147 0 0 0</pose>
-      <parent>middle_phalanx2</parent>
-      <child>distal_phalanx</child>
-      <axis>
-        <xyz expressed_in="__model__">-1.0 0.0 0.0</xyz>
-        <limit>
-          <lower>0.0</lower>
-          <upper>1.57</upper>
-          <effort>3.0</effort>
-          <velocity>3.14</velocity>
-        </limit>
-        <dynamics>
-          <damping>0.1</damping>
-          <friction>0.05</friction>
-        </dynamics>
-      </axis>
-    </joint> -->
 
   </model>
 </sdf>

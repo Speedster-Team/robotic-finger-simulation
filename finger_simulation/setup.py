@@ -11,6 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', ['launch/fingersim.launch.xml']),
+        ('share/' + package_name + '/launch', ['launch/4barfingersim.launch.xml']),
         ('share/' + package_name + '/config', ['config/base_sim.rviz']),
         
     ],
@@ -28,7 +29,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'drakesim = finger_simulation.finger_sim:main'
+            'drakesim = finger_simulation.finger_sim:main',
+            '4bardrakesim = finger_simulation.4barfinger_sim:main',
         ],
     },
 )

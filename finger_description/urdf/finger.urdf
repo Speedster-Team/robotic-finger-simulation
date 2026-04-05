@@ -50,6 +50,16 @@
     <limit lower="-0.174533" upper="0.174533" effort="5.0" velocity="3.14"/>
     <dynamics damping="0.1" friction="0.0"/>
   </joint>
+  <transmission name="mcp_splay_transmission">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="mcp_splay">
+      <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="mcp_splay_motor">
+      <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
 
   <!-- Space between MCP splay and flexion -->
   <link name="mcp_link">
@@ -79,6 +89,16 @@
     <limit lower="0.0" upper="1.57" effort="5.0" velocity="3.14"/>
     <dynamics damping="0.1" friction="0.0"/>
   </joint>
+  <transmission name="mcp_flexion_transmission">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="mcp_flexion">
+      <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="mcp_flexion_motor">
+      <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
 
   <!-- Proximal phalanx -->
   <link name="proximal_phalanx">
@@ -108,6 +128,16 @@
     <limit lower="0.0" upper="1.57" effort="5.0" velocity="3.14"/>
     <dynamics damping="0.1" friction="0.0"/>
   </joint>
+  <transmission name="pip_flexion_transmission">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="pip_flexion">
+      <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="pip_flexion_motor">
+      <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
 
   <!-- Middle phalanx -->
   <link name="middle_phalanx">
