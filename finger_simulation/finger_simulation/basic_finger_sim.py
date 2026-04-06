@@ -1,5 +1,5 @@
 ################################## citation [0] begin ################################
-import numpy
+import numpy as np
 
 from pydrake.geometry import DrakeVisualizer
 from pydrake.math import RigidTransform
@@ -76,7 +76,7 @@ def main():
 
     # Set the control input to zero torque
     nu = plant.num_actuated_dofs(finger)
-    u0 = numpy.zeros(nu)
+    u0 = np.ones(nu)
     constant = builder.AddSystem(ConstantVectorSource(u0))
     builder.Connect(
         constant.get_output_port(0),
