@@ -1,6 +1,24 @@
+
+from pathlib import Path
+
 from setuptools import find_packages, setup
 
 package_name = 'finger_simulation'
+
+
+def recursive_files(prefix, path):
+    """
+    Recurse over path returning a list of tuples for use with setuptools.
+
+    :param prefix: prefix path to prepend to the path
+    :param path: Path to directory to recurse. Path should not have
+      a trailing '/'
+    :return: List of tuples. First element of each tuple is destination path,
+      second element is a list of files to copy to that path
+    """
+    return [(str(Path(prefix)/subdir),
+             [str(file) for file in subdir.glob('*') if not file.is_dir()]
+             ) for subdir in Path(path).glob('**')]
 
 setup(
     name=package_name,
@@ -10,9 +28,10 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', ['launch/basic_fingersim.launch.xml']),
         ('share/' + package_name + '/config', ['config/base_sim.rviz']),
-        
+        *recursive_files('share/' + package_name, 'models'),
+        *recursive_files('share/' + package_name, 'launch'),
+
     ],
     package_data={'': ['py.typed']},
     install_requires=['setuptools'],
@@ -29,6 +48,7 @@ setup(
     entry_points={
         'console_scripts': [
             'basicsim = finger_simulation.basic_finger_sim:main',
+            '4barsim = finger_simulation.4barfinger_sim:main',
         ],
     },
 )

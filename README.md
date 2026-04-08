@@ -46,7 +46,7 @@ Drake must be installed on system as well as on drake_ros built locally in a ove
 1. Clone this repository into the src of a new ros2 workspace
 2. Build using `colcon build`
 3. Make sure you source the drake workspace, see the *finger_simulation README* for more information
-3. Launch the drake simulation: `ros2 launch finger_simulation basic_fingersim.launch.xml`
+3. Launch the drake simulation: `ros2 launch finger_simulation 4barsim.launch.xml`
 
 ## AI usage
 AI was used to get the 'basic_' version up and runnning, provided with examples from the official drake_ros github repo.
