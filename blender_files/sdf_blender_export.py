@@ -40,8 +40,8 @@ JOINTS = [
         "child":    "mcp_link",
         "lower":    -0.174533,
         "upper":    0.174533,
-        "effort":   5.0,
-        "velocity": 3.14,
+        "effort":   10000.0,
+        "velocity": 10000.0,
         "damping":  0.05,
         "friction": 0.0,
         "empty":    "mcp_splay",
@@ -51,10 +51,10 @@ JOINTS = [
         "type":     "revolute",
         "parent":   "mcp_link",
         "child":    "proximal_phalanx",
-        "lower":    -0.1,
+        "lower":    0.0,
         "upper":    1.570,
-        "effort":   5.0,
-        "velocity": 3.14,
+        "effort":   10000.0,
+        "velocity": 10000.0,
         "damping":  0.05,
         "friction": 0.0,
         "empty":    "mcp_flex",
@@ -64,10 +64,10 @@ JOINTS = [
         "type":     "revolute",
         "parent":   "proximal_phalanx",
         "child":    "middle_phalanx1",
-        "lower":    -0.1,
+        "lower":    0.0,
         "upper":    1.570,
-        "effort":   5.0,
-        "velocity": 3.14,
+        "effort":   10000.0,
+        "velocity": 10000.0,
         "damping":  0.05,
         "friction": 0.0,
         "empty":    "pip_flex1",
@@ -77,10 +77,10 @@ JOINTS = [
         "type":     "revolute",
         "parent":   "proximal_phalanx",
         "child":    "middle_phalanx2",
-        "lower":    -0.1,
+        "lower":    0.0,
         "upper":    1.570,
         "effort":   0.0,
-        "velocity": 3.14,
+        "velocity": 10000.0,
         "damping":  0.05,
         "friction": 0.0,
         "empty":    "pip_flex2",
@@ -93,7 +93,7 @@ JOINTS = [
         "lower":    -0.1,
         "upper":    1.570,
         "effort":   0.0,
-        "velocity": 3.14,
+        "velocity": 10000.0,
         "damping":  0.05,
         "friction": 0.0,
         "empty":    "dip_flex1",
@@ -183,7 +183,7 @@ def get_empty_data(name):
     loc  = obj.matrix_world.translation
     axis = obj.matrix_world.to_3x3().col[2].normalized()
     origin = tuple(round(c, 4) for c in loc)
-    axis   = tuple(snap(c) for c in axis)a
+    axis   = tuple(snap(c) for c in axis)
     return origin, axis
 
 def fmt_pose(xyz, rpy=(0, 0, 0)):

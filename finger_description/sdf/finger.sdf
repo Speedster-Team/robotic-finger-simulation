@@ -158,8 +158,8 @@
         <limit>
           <lower>-0.174533</lower>
           <upper>0.174533</upper>
-          <effort>5.0</effort>
-          <velocity>3.14</velocity>
+          <effort>10000.0</effort>
+          <velocity>10000.0</velocity>
         </limit>
         <dynamics>
           <damping>0.05</damping>
@@ -176,10 +176,10 @@
       <axis>
         <xyz expressed_in="__model__">-1.0 0.0 0.0</xyz>
         <limit>
-          <lower>-0.1</lower>
+          <lower>0.0</lower>
           <upper>1.57</upper>
-          <effort>5.0</effort>
-          <velocity>3.14</velocity>
+          <effort>10000.0</effort>
+          <velocity>10000.0</velocity>
         </limit>
         <dynamics>
           <damping>0.05</damping>
@@ -196,10 +196,10 @@
       <axis>
         <xyz expressed_in="__model__">-1.0 0.0 0.0</xyz>
         <limit>
-          <lower>-0.1</lower>
+          <lower>0.0</lower>
           <upper>1.57</upper>
-          <effort>5.0</effort>
-          <velocity>3.14</velocity>
+          <effort>10000.0</effort>
+          <velocity>10000.0</velocity>
         </limit>
         <dynamics>
           <damping>0.05</damping>
@@ -216,10 +216,10 @@
       <axis>
         <xyz expressed_in="__model__">-1.0 0.0 0.0</xyz>
         <limit>
-          <lower>-0.1</lower>
+          <lower>0.0</lower>
           <upper>1.57</upper>
           <effort>0.0</effort>
-          <velocity>3.14</velocity>
+          <velocity>10000.0</velocity>
         </limit>
         <dynamics>
           <damping>0.05</damping>
@@ -239,7 +239,7 @@
           <lower>-0.1</lower>
           <upper>1.57</upper>
           <effort>0.0</effort>
-          <velocity>3.14</velocity>
+          <velocity>10000.0</velocity>
         </limit>
         <dynamics>
           <damping>0.05</damping>

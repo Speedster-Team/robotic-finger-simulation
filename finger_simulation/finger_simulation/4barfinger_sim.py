@@ -12,151 +12,207 @@ from pydrake.systems.framework import DiagramBuilder, TriggerType
 from pydrake.systems.primitives import ConstantVectorSource
 from pydrake.geometry import Meshcat
 from pydrake.geometry import MeshcatVisualizer, MeshcatVisualizerParams
+from pydrake.systems.primitives import ZeroOrderHold
+from pydrake.systems.framework import LeafSystem
+
+from rclpy.qos import QoSProfile
+
 import drake_ros.core
-from drake_ros.core import ClockSystem, RosInterfaceSystem
+from drake_ros.core import ClockSystem, RosInterfaceSystem, RosSubscriberSystem, SerializerInterface
 from drake_ros.tf2 import SceneTfBroadcasterParams, SceneTfBroadcasterSystem
 from drake_ros.viz import RvizVisualizer, RvizVisualizerParams
 
+from std_msgs.msg import Float64MultiArray
+
 from ament_index_python.packages import get_package_share_directory
 import os
+from finger_simulation.systems.motor_system import MotorSystem
+import pydot 
+import time
+class FingerSimulation():
+    """Class runs drake simulation of the finger"""
 
+    def __init__(self):
+        self.builder = DiagramBuilder()
+        drake_ros.core.init()
+
+        self.sys_ros_interface = self.builder.AddSystem(RosInterfaceSystem("fingersim"))
+        ClockSystem.AddToBuilder(self.builder, self.sys_ros_interface.get_ros_interface())
+
+        self.plant, self.scene_graph = AddMultibodyPlant(
+            MultibodyPlantConfig(time_step=0.01),
+            self.builder,
+        )
+
+    def init_viz(self, enable_rviz):
+        """Initialize all visualization aspects of drake simulation."""
+        # start tf broadcaster
+        viz_dt = 1 / 100.0
+        scene_tf_broadcaster = self.builder.AddSystem(
+            SceneTfBroadcasterSystem(
+                self.sys_ros_interface.get_ros_interface(),
+                params=SceneTfBroadcasterParams(
+                    publish_triggers={TriggerType.kPeriodic},
+                    publish_period=viz_dt,
+                ),
+            )
+        )
+
+        self.builder.Connect(
+            self.scene_graph.get_query_output_port(),
+            scene_tf_broadcaster.get_graph_query_input_port(),
+        )
+
+        if (enable_rviz):
+            ### FOR RVIZ
+            scene_visualizer = self.builder.AddSystem(
+                RvizVisualizer(
+                    self.sys_ros_interface.get_ros_interface(),
+                    params=RvizVisualizerParams(
+                        publish_triggers={TriggerType.kPeriodic},
+                        publish_period=viz_dt,
+                    ),
+                )
+            )
+
+            self.builder.Connect(
+                self.scene_graph.get_query_output_port(),
+                scene_visualizer.get_graph_query_input_port(),
+            )
+        else:
+            ### FOR MESHCAT
+            meshcat = Meshcat()
+
+            visualizer = MeshcatVisualizer.AddToBuilder(
+                self.builder,
+                self.scene_graph,
+                meshcat,
+                MeshcatVisualizerParams()
+            )
+
+    def load_scene(self):
+        """Load all models into scene and fix in space."""
+        # Load finger SDF
+        parser = Parser(self.plant)
+        pm = parser.package_map()
+
+        # Derive workspace install dir from any known package
+        share_dir = get_package_share_directory("finger_simulation")
+        install_dir = os.path.join(share_dir, "..", "..", "..")  # share/pkg -> install/
+        pm.PopulateFromFolder(os.path.realpath(install_dir))
+
+        # Weld the grass to the world so that it's fixed during the simulation.
+        self.finger, = parser.AddModels(url="package://finger_description/sdf/finger.sdf")
+        self.plant.RenameModelInstance(model_instance=self.finger, name="speedster_finger")
+        parser.AddModels(
+            url="package://finger_simulation/models/grasspatch/model.sdf")
+        parser.AddModels(
+            url="package://finger_simulation/models/Standard_Toilet/model.sdf")
+
+        base_frame = self.plant.GetFrameByName("base_link", self.finger)
+        self.plant.WeldFrames(self.plant.world_frame(), base_frame, RigidTransform(np.array([0,0,.05])))
+
+        # close loop for four bar
+        middle_phalanx2 = self.plant.GetBodyByName("middle_phalanx2", self.finger)
+        distal_phalanx  = self.plant.GetBodyByName("distal_phalanx", self.finger)
+
+        p_AP = np.array([0.0001,  0.0348, -0.0147])  # dip_flex2 in middle_phalanx2 frame
+        p_BQ = np.array([-0.0054, 0.0022, -0.0087])  # dip_flex2 in distal_phalanx frame
+
+        self.plant.AddBallConstraint(
+            body_A=middle_phalanx2,
+            p_AP=p_AP,
+            body_B=distal_phalanx,
+            p_BQ=p_BQ,
+        )
+        self.plant.Finalize()
+
+        # set up other object locations
+        grasspatch_frame = self.plant.GetFrameByName("grasspatch_frame")
+        plant_context = self.plant.CreateDefaultContext()
+        tf_world_grasspatch = grasspatch_frame.CalcPoseInWorld(plant_context)
+
+        standard_toilet_body = self.plant.GetBodyByName("toilet_base_link")
+        tf_grasspatch_toilet = RigidTransform(RollPitchYaw(np.asarray([45, 30, 0]) * np.pi / 180), p=[1.0,0,0.8])
+        tf_world_toilet = tf_world_grasspatch.multiply(tf_grasspatch_toilet)
+        self.plant.SetDefaultFloatingBaseBodyPose(standard_toilet_body, tf_world_toilet)
+
+    def torques(self):
+        # constant torques
+        nu = self.plant.num_actuated_dofs(self.finger)
+        u0 = np.ones(nu) * 10
+        constant = self.builder.AddSystem(ConstantVectorSource(u0))
+        self.builder.Connect(
+            constant.get_output_port(0),
+            self.plant.get_actuation_input_port(self.finger),
+        )
+
+        # # ros topic torque commands
+        # nu = plant.num_actuated_dofs(finger)
+
+        # # Subscriber reads Float64MultiArray from /finger/torque_command
+        # torque_sub = builder.AddSystem(
+        #     RosSubscriberSystem(
+        #         SerializerInterface(Float64MultiArray),
+        #         "/cmd_torque",
+        #         QoSProfile(depth=1),
+        #         sys_ros_interface.get_ros_interface(),
+        #     )
+        # )
+
+        # ZeroOrderHold bridges the async ROS message into the Drake time-stepped system.
+        # It holds the last received value until a new one arrives.
+        # zoh = builder.AddSystem(ZeroOrderHold(period_sec=0.001, vector_size=nu))
+
+        # builder.Connect(torque_sub.get_output_port(0), zoh.get_input_port(0))
+        # builder.Connect(zoh.get_output_port(0), plant.get_actuation_input_port(finger))
+
+    def build_diagram(self):
+        self.diagram = self.builder.Build()
+
+    def save_diagram(self):
+        dot_string = self.diagram.GetGraphvizString()
+        graphs = pydot.graph_from_dot_data(dot_string)
+        graphs[0].write_png("diagram.png")
+
+    def run(self):
+        """Start the simulation."""
+        simulator = Simulator(self.diagram)
+        simulator.Initialize()
+        time.sleep(3.0)  # delay 3 seconds
+        simulator_context = simulator.get_mutable_context()
+        simulator.set_target_realtime_rate(0)
+
+        plant_context = self.diagram.GetMutableSubsystemContext(self.plant, simulator_context)
+
+        step = 0.01
+        sim_time = float("inf")
+        while simulator_context.get_time() < sim_time:
+            next_time = min(
+                simulator_context.get_time() + step,
+                sim_time,
+            )
+            simulator.AdvanceTo(next_time)
 def main():
-    builder = DiagramBuilder()
-    drake_ros.core.init()
+    fingersim = FingerSimulation()
+    fingersim.init_viz(enable_rviz=True)
+    fingersim.load_scene()
 
-    sys_ros_interface = builder.AddSystem(RosInterfaceSystem("fingersim"))
-    ClockSystem.AddToBuilder(builder, sys_ros_interface.get_ros_interface())
+    # add external systems
+    nu = fingersim.plant.num_actuated_dofs(fingersim.finger)
+    torque_system = fingersim.builder.AddSystem(MotorSystem(nu, "/cmd_torque"))
 
-    plant, scene_graph = AddMultibodyPlant(
-        MultibodyPlantConfig(time_step=0.001),
-        builder,
+    fingersim.builder.Connect(
+        torque_system.get_output_port(0),
+        fingersim.plant.get_actuation_input_port(fingersim.finger),
     )
 
-    viz_dt = 1 / 100.0
-    scene_tf_broadcaster = builder.AddSystem(
-        SceneTfBroadcasterSystem(
-            sys_ros_interface.get_ros_interface(),
-            params=SceneTfBroadcasterParams(
-                publish_triggers={TriggerType.kPeriodic},
-                publish_period=viz_dt,
-            ),
-        )
-    )
+    fingersim.build_diagram()
+    # fingersim.save_diagram()
+    fingersim.run()
 
-    ### FOR MESHCAT
-
-    # meshcat = Meshcat()
-
-    # visualizer = MeshcatVisualizer.AddToBuilder(
-    #     builder,
-    #     scene_graph,
-    #     meshcat,
-    #     MeshcatVisualizerParams()
-    # )
-
-    ### FOR RVIZ
-
-    scene_visualizer = builder.AddSystem(
-        RvizVisualizer(
-            sys_ros_interface.get_ros_interface(),
-            params=RvizVisualizerParams(
-                publish_triggers={TriggerType.kPeriodic},
-                publish_period=viz_dt,
-            ),
-        )
-    )
-
-    builder.Connect(
-        scene_graph.get_query_output_port(),
-        scene_visualizer.get_graph_query_input_port(),
-    )
-
-    builder.Connect(
-        scene_graph.get_query_output_port(),
-        scene_tf_broadcaster.get_graph_query_input_port(),
-    )
-
-    # Load finger SDF
-    parser = Parser(plant)
-    pm = parser.package_map()
-
-    # Derive workspace install dir from any known package
-    share_dir = get_package_share_directory("finger_simulation")
-    install_dir = os.path.join(share_dir, "..", "..", "..")  # share/pkg -> install/
-    pm.PopulateFromFolder(os.path.realpath(install_dir))
-
-    # Weld the grass to the world so that it's fixed during the simulation.
-    finger, = parser.AddModels(url="package://finger_description/sdf/finger.sdf")
-    plant.RenameModelInstance(model_instance=finger, name="speedster_finger")
-    parser.AddModels(
-        url="package://finger_simulation/models/grasspatch/model.sdf")
-    parser.AddModels(
-        url="package://finger_simulation/models/Standard_Toilet/model.sdf")
-
-    base_frame = plant.GetFrameByName("base_link", finger)
-    plant.WeldFrames(plant.world_frame(), base_frame, RigidTransform(np.array([0,0,.05])))
-
-    # close loop for four bar
-    middle_phalanx2 = plant.GetBodyByName("middle_phalanx2", finger)
-    distal_phalanx  = plant.GetBodyByName("distal_phalanx", finger)
-
-    p_AP = np.array([0.0001,  0.0348, -0.0147])  # dip_flex2 in middle_phalanx2 frame
-    p_BQ = np.array([-0.0054, 0.0022, -0.0087])  # dip_flex2 in distal_phalanx frame
-
-    plant.AddBallConstraint(
-        body_A=middle_phalanx2,
-        p_AP=p_AP,
-        body_B=distal_phalanx,
-        p_BQ=p_BQ,
-    )
-    plant.Finalize()
-
-    ### Set up scene
-
-    grasspatch_frame = plant.GetFrameByName("grasspatch_frame")
-    plant_context = plant.CreateDefaultContext()
-    tf_world_grasspatch = grasspatch_frame.CalcPoseInWorld(plant_context)
-
-    standard_toilet_body = plant.GetBodyByName("toilet_base_link")
-    tf_grasspatch_toilet = RigidTransform(RollPitchYaw(np.asarray([45, 30, 0]) * np.pi / 180), p=[1.0,0,0.8])
-    tf_world_toilet = tf_world_grasspatch.multiply(tf_grasspatch_toilet)
-    plant.SetDefaultFloatingBaseBodyPose(standard_toilet_body, tf_world_toilet)
-
-
-    # Zero torque input
-    nu = plant.num_actuated_dofs(finger)
-    u0 = np.ones(nu) * 10
-    constant = builder.AddSystem(ConstantVectorSource(u0))
-    builder.Connect(
-        constant.get_output_port(0),
-        plant.get_actuation_input_port(finger),
-    )
-
-    _viz = DrakeVisualizer.AddToBuilder(builder, scene_graph)
-
-    diagram = builder.Build()
-    simulator = Simulator(diagram)
-    simulator.Initialize()
-    simulator_context = simulator.get_mutable_context()
-    simulator.set_target_realtime_rate(1.0)
-
-    plant_context = diagram.GetMutableSubsystemContext(plant, simulator_context)
-
-    joint = plant.GetJointByName("mcp_flexion")
-    print("mcp_flexion axis:", joint.revolute_axis())  # should be [-1, 0, 0] in world at rest
-    print("num_positions:", plant.num_positions())
-    print("num_velocities:", plant.num_velocities())
-    print("num_actuated_dofs:", plant.num_actuated_dofs(finger))
-    print("gravity:", plant.gravity_field().gravity_vector())
-
-    step = 0.01
-    sim_time = float("inf")
-    while simulator_context.get_time() < sim_time:
-        next_time = min(
-            simulator_context.get_time() + step,
-            sim_time,
-        )
-        simulator.AdvanceTo(next_time)
+    
+    
 
 if __name__ == "__main__":
     main()

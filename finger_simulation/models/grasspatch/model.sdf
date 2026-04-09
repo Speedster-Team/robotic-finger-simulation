@@ -6,13 +6,13 @@
       <collision name='collision'>
         <pose>0 0 0 0 0 0</pose>  
         <geometry>
-          <plane>
+          <!-- <plane>
             <normal>0 0 1</normal>
             <size>15 15</size>
-          </plane>
-          <!-- <box>
+          </plane> -->
+          <box>
             <size>10 10 0.01</size>
-          </box> -->
+          </box>
         </geometry>
         <surface>
           <friction>

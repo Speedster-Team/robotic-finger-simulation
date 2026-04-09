@@ -12,13 +12,13 @@
         <material>
           <diffuse>1.0 1.0 1.0</diffuse>
           <specular>1.0 1.0 1.0</specular>
-          <pbr>
+          <!-- <pbr>
             <metal>
               <albedo_map>materials/textures/Toilet_Albedo.png</albedo_map>
               <normal_map>materials/textures/Toilet_Normal.png</normal_map>
               <roughness_map>materials/textures/Toilet_Roughness.png</roughness_map>
             </metal>
-          </pbr>
+          </pbr> -->
         </material>
       </visual>
       <!-- <collision name="Box001">
