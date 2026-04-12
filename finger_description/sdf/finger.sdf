@@ -14,20 +14,21 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/visual/base_link.obj</uri>
+            <uri>package://finger_description/meshes/sdf/visual/base_link.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/collision/col_base_link.obj</uri>
+            <uri>package://finger_description/meshes/sdf/collision/col_base_link.obj</uri>
           </mesh>
         </geometry>
       </collision>
       <inertial>
-        <mass>0.05</mass>
-        <inertia><ixx>1e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1e-05</iyy><iyz>0</iyz><izz>1e-05</izz></inertia>
+        <pose>0.0 0.0 0.0 0 0 0</pose>
+        <mass>0.05241479382608486</mass>
+        <inertia><ixx>1.73861e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1.50119e-05</iyy><iyz>0</iyz><izz>8.65996e-06</izz></inertia>
       </inertial>
     </link>
 
@@ -37,20 +38,21 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/visual/mcp_link.obj</uri>
+            <uri>package://finger_description/meshes/sdf/visual/mcp_link.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/collision/col_mcp_link.obj</uri>
+            <uri>package://finger_description/meshes/sdf/collision/col_mcp_link.obj</uri>
           </mesh>
         </geometry>
       </collision>
       <inertial>
-        <mass>0.01</mass>
-        <inertia><ixx>1e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1e-05</iyy><iyz>0</iyz><izz>1e-05</izz></inertia>
+        <pose>0.0 -0.0196 -0.017 0 0 0</pose>
+        <mass>0.02253732576850662</mass>
+        <inertia><ixx>8.55639e-06</ixx><ixy>0</ixy><ixz>0</ixz><iyy>4.76436e-06</iyy><iyz>0</iyz><izz>6.18722e-06</izz></inertia>
       </inertial>
     </link>
 
@@ -60,20 +62,21 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/visual/proximal_phalanx.obj</uri>
+            <uri>package://finger_description/meshes/sdf/visual/proximal_phalanx.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/collision/col_proximal_phalanx.obj</uri>
+            <uri>package://finger_description/meshes/sdf/collision/col_proximal_phalanx.obj</uri>
           </mesh>
         </geometry>
       </collision>
       <inertial>
-        <mass>0.01</mass>
-        <inertia><ixx>1e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1e-05</iyy><iyz>0</iyz><izz>1e-05</izz></inertia>
+        <pose>-0.0014 -0.0374 -0.017 0 0 0</pose>
+        <mass>0.04981346881823438</mass>
+        <inertia><ixx>0.000130256</ixx><ixy>0</ixy><ixz>0</ixz><iyy>8.3049e-06</iyy><iyz>0</iyz><izz>0.000127495</izz></inertia>
       </inertial>
     </link>
 
@@ -83,20 +86,21 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/visual/middle_phalanx1.obj</uri>
+            <uri>package://finger_description/meshes/sdf/visual/middle_phalanx1.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/collision/col_middle_phalanx1.obj</uri>
+            <uri>package://finger_description/meshes/sdf/collision/col_middle_phalanx1.obj</uri>
           </mesh>
         </geometry>
       </collision>
       <inertial>
-        <mass>0.008</mass>
-        <inertia><ixx>5e-06</ixx><ixy>0</ixy><ixz>0</ixz><iyy>5e-06</iyy><iyz>0</iyz><izz>5e-06</izz></inertia>
+        <pose>0.0001 -0.0985 -0.0153 0 0 0</pose>
+        <mass>0.011833800203361498</mass>
+        <inertia><ixx>8.21989e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1.0509e-06</iyy><iyz>0</iyz><izz>8.19686e-05</izz></inertia>
       </inertial>
     </link>
 
@@ -106,20 +110,21 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/visual/middle_phalanx2.obj</uri>
+            <uri>package://finger_description/meshes/sdf/visual/middle_phalanx2.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/collision/col_middle_phalanx2.obj</uri>
+            <uri>package://finger_description/meshes/sdf/collision/col_middle_phalanx2.obj</uri>
           </mesh>
         </geometry>
       </collision>
       <inertial>
-        <mass>0.008</mass>
-        <inertia><ixx>5e-06</ixx><ixy>0</ixy><ixz>0</ixz><iyy>5e-06</iyy><iyz>0</iyz><izz>5e-06</izz></inertia>
+        <pose>0.0019 -0.1065 -0.0191 0 0 0</pose>
+        <mass>0.0021724981353969087</mass>
+        <inertia><ixx>1.70596e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>2.03633e-07</iyy><iyz>0</iyz><izz>1.68855e-05</izz></inertia>
       </inertial>
     </link>
 
@@ -129,20 +134,21 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/visual/distal_phalanx.obj</uri>
+            <uri>package://finger_description/meshes/sdf/visual/distal_phalanx.obj</uri>
           </mesh>
         </geometry>
       </visual>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>package://finger_description/meshes/collision/col_distal_phalanx.obj</uri>
+            <uri>package://finger_description/meshes/sdf/collision/col_distal_phalanx.obj</uri>
           </mesh>
         </geometry>
       </collision>
       <inertial>
-        <mass>0.005</mass>
-        <inertia><ixx>2e-06</ixx><ixy>0</ixy><ixz>0</ixz><iyy>2e-06</iyy><iyz>0</iyz><izz>2e-06</izz></inertia>
+        <pose>-0.0036 -0.1391 -0.0131 0 0 0</pose>
+        <mass>0.008185004374548763</mass>
+        <inertia><ixx>0.000101888</ixx><ixy>0</ixy><ixz>0</ixz><iyy>3.71921e-07</iyy><iyz>0</iyz><izz>0.000101689</izz></inertia>
       </inertial>
     </link>
 
@@ -162,7 +168,7 @@
           <velocity>10000.0</velocity>
         </limit>
         <dynamics>
-          <damping>0.05</damping>
+          <damping>0.001</damping>
           <friction>0.0</friction>
         </dynamics>
       </axis>
@@ -182,7 +188,7 @@
           <velocity>10000.0</velocity>
         </limit>
         <dynamics>
-          <damping>0.05</damping>
+          <damping>0.001</damping>
           <friction>0.0</friction>
         </dynamics>
       </axis>
@@ -202,7 +208,7 @@
           <velocity>10000.0</velocity>
         </limit>
         <dynamics>
-          <damping>0.05</damping>
+          <damping>0.001</damping>
           <friction>0.0</friction>
         </dynamics>
       </axis>
@@ -222,7 +228,7 @@
           <velocity>10000.0</velocity>
         </limit>
         <dynamics>
-          <damping>0.05</damping>
+          <damping>0.001</damping>
           <friction>0.0</friction>
         </dynamics>
       </axis>
@@ -236,13 +242,13 @@
       <axis>
         <xyz expressed_in="__model__">-1.0 0.0 0.0</xyz>
         <limit>
-          <lower>-0.1</lower>
+          <lower>0.0</lower>
           <upper>1.57</upper>
           <effort>0.0</effort>
           <velocity>10000.0</velocity>
         </limit>
         <dynamics>
-          <damping>0.05</damping>
+          <damping>0.001</damping>
           <friction>0.0</friction>
         </dynamics>
       </axis>

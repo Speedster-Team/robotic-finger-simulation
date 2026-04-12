@@ -26,12 +26,12 @@
   <link name="base_link">
     <visual>
       <geometry>
-        <mesh filename="package://finger_description/meshes/visual/base_link.obj"/>
+        <mesh filename="package://finger_description/meshes/urdf/visual/base_link.obj"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://finger_description/meshes/collision/col_base_link.obj"/>
+        <mesh filename="package://finger_description/meshes/urdf/collision/col_base_link.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -55,12 +55,12 @@
   <link name="mcp_link">
     <visual>
       <geometry>
-        <mesh filename="package://finger_description/meshes/visual/mcp_link.obj"/>
+        <mesh filename="package://finger_description/meshes/urdf/visual/mcp_link.obj"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://finger_description/meshes/collision/col_mcp_link.obj"/>
+        <mesh filename="package://finger_description/meshes/urdf/collision/col_mcp_link.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -84,12 +84,12 @@
   <link name="proximal_phalanx">
     <visual>
       <geometry>
-        <mesh filename="package://finger_description/meshes/visual/proximal_phalanx.obj"/>
+        <mesh filename="package://finger_description/meshes/urdf/visual/proximal_phalanx.obj"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://finger_description/meshes/collision/col_proximal_phalanx.obj"/>
+        <mesh filename="package://finger_description/meshes/urdf/collision/col_proximal_phalanx.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -113,12 +113,12 @@
   <link name="middle_phalanx">
     <visual>
       <geometry>
-        <mesh filename="package://finger_description/meshes/visual/middle_phalanx.obj"/>
+        <mesh filename="package://finger_description/meshes/urdf/visual/middle_phalanx.obj"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://finger_description/meshes/collision/col_middle_phalanx.obj"/>
+        <mesh filename="package://finger_description/meshes/urdf/collision/col_middle_phalanx.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -143,12 +143,12 @@
   <link name="distal_phalanx">
     <visual>
       <geometry>
-        <mesh filename="package://finger_description/meshes/visual/distal_phalanx.obj"/>
+        <mesh filename="package://finger_description/meshes/urdf/visual/distal_phalanx.obj"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://finger_description/meshes/collision/col_distal_phalanx.obj"/>
+        <mesh filename="package://finger_description/meshes/urdf/collision/col_distal_phalanx.obj"/>
       </geometry>
     </collision>
     <inertial>

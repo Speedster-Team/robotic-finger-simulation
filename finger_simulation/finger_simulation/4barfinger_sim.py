@@ -110,7 +110,7 @@ class FingerSimulation():
             url="package://finger_simulation/models/Standard_Toilet/model.sdf")
 
         base_frame = self.plant.GetFrameByName("base_link", self.finger)
-        self.plant.WeldFrames(self.plant.world_frame(), base_frame, RigidTransform(np.array([0,0,.05])))
+        self.plant.WeldFrames(self.plant.world_frame(), base_frame, RigidTransform(RollPitchYaw([0, 0, 0]), np.array([0,0,.1])))
 
         # close loop for four bar
         middle_phalanx2 = self.plant.GetBodyByName("middle_phalanx2", self.finger)

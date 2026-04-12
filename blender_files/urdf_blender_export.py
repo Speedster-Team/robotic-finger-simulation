@@ -4,7 +4,7 @@ import mathutils
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-MESHES_DIR    = "/home/michael-jenz/rds_ws/finger_vizualization/src/drake-finger-sim/finger_description/meshes"
+MESHES_DIR    = "/home/michael-jenz/rds_ws/finger_vizualization/src/drake-finger-sim/finger_description/meshes/urdf"
 URDF_PATH     = "/home/michael-jenz/rds_ws/finger_vizualization/src/drake-finger-sim/finger_description/urdf/finger.urdf"
 VISUAL_DIR    = os.path.join(MESHES_DIR, "visual")
 COLLISION_DIR = os.path.join(MESHES_DIR, "collision")
@@ -217,12 +217,12 @@ def link_block(link):
     if link["mesh"]:
         lines.append(f'    <visual>')
         lines.append(f'      <geometry>')
-        lines.append(f'        <mesh filename="package://{pkg}/meshes/visual/{name}.obj"/>')
+        lines.append(f'        <mesh filename="package://{pkg}/meshes/urdf/visual/{name}.obj"/>')
         lines.append(f'      </geometry>')
         lines.append(f'    </visual>')
         lines.append(f'    <collision>')
         lines.append(f'      <geometry>')
-        lines.append(f'        <mesh filename="package://{pkg}/meshes/collision/col_{name}.obj"/>')
+        lines.append(f'        <mesh filename="package://{pkg}/meshes/urdf/collision/col_{name}.obj"/>')
         lines.append(f'      </geometry>')
         lines.append(f'    </collision>')
 

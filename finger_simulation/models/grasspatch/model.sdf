@@ -32,11 +32,12 @@
             <size>15 15</size>
           </plane>
         </geometry>
-          <material>
-         <diffuse>1.0 1.0 1.0</diffuse>
-          <specular>1.0 1.0 1.0</specular>
-		  
-		</material>
+          <material> <!-- LED material -->
+            <ambient>0 0 0 1</ambient>
+            <diffuse>0 0 0 1</diffuse>
+            <specular>0 0 0 0</specular>
+            <emissive>0 1 0 1</emissive>
+          </material> <!-- End LED material -->
       </visual>
     </link>
     <frame name="grasspatch_frame">

@@ -1,6 +1,7 @@
 import bpy
 import os
 import mathutils
+import bmesh
 
 #
 # SDF exporter for a four-bar linkage finger model.
@@ -18,14 +19,15 @@ import mathutils
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
-MESHES_DIR    = "/home/michael-jenz/rdfms_ws/finger_vizualization/src/drake-finger-sim/finger_description/meshes"
+MESHES_DIR    = "/home/michael-jenz/rds_ws/finger_vizualization/src/drake-finger-sim/finger_description/meshes/sdf"
 SDF_PATH      = "/home/michael-jenz/rds_ws/finger_vizualization/src/drake-finger-sim/finger_description/sdf/finger.sdf"
 VISUAL_DIR    = os.path.join(MESHES_DIR, "visual")
 COLLISION_DIR = os.path.join(MESHES_DIR, "collision")
 AXES_FILE     = os.path.join(MESHES_DIR, "joint_axes.yaml")
 PACKAGE_NAME  = "finger_description"
 ROBOT_NAME    = "finger"
-
+DENSITY       = 2700.0  # kg/m³ 
+DAMPING       = 0.001
 os.makedirs(VISUAL_DIR, exist_ok=True)
 os.makedirs(COLLISION_DIR, exist_ok=True)
 os.makedirs(os.path.dirname(SDF_PATH), exist_ok=True)
@@ -42,7 +44,7 @@ JOINTS = [
         "upper":    0.174533,
         "effort":   10000.0,
         "velocity": 10000.0,
-        "damping":  0.05,
+        "damping":  DAMPING,
         "friction": 0.0,
         "empty":    "mcp_splay",
     },
@@ -55,7 +57,7 @@ JOINTS = [
         "upper":    1.570,
         "effort":   10000.0,
         "velocity": 10000.0,
-        "damping":  0.05,
+        "damping":  DAMPING,
         "friction": 0.0,
         "empty":    "mcp_flex",
     },
@@ -68,7 +70,7 @@ JOINTS = [
         "upper":    1.570,
         "effort":   10000.0,
         "velocity": 10000.0,
-        "damping":  0.05,
+        "damping":  DAMPING,
         "friction": 0.0,
         "empty":    "pip_flex1",
     },
@@ -81,7 +83,7 @@ JOINTS = [
         "upper":    1.570,
         "effort":   0.0,
         "velocity": 10000.0,
-        "damping":  0.05,
+        "damping":  DAMPING,
         "friction": 0.0,
         "empty":    "pip_flex2",
     },
@@ -90,11 +92,11 @@ JOINTS = [
         "type":     "revolute",
         "parent":   "middle_phalanx1",
         "child":    "distal_phalanx",
-        "lower":    -0.1,
+        "lower":    0.0,
         "upper":    1.570,
         "effort":   0.0,
         "velocity": 10000.0,
-        "damping":  0.05,
+        "damping":  DAMPING,
         "friction": 0.0,
         "empty":    "dip_flex1",
     },
@@ -105,7 +107,7 @@ JOINTS = [
     #     "child":    "distal_phalanx",
     #     "lower":    0.0,
     #     "upper":    1.570,
-    #     "effort":   3.0,
+    #     "effort":   0.0,
     #     "velocity": 3.14,
     #     "damping":  0.1,
     #     "friction": 0.05,
@@ -116,44 +118,38 @@ JOINTS = [
 LINKS = [
     {
         "name":    "base_link",
+        "com_empty": "com_base_link",
         "mesh":    True,
-        "mass":    0.05,
-        "inertia": (1e-5, 1e-5, 1e-5),
         "comment": "Finger base",
     },
     {
         "name":    "mcp_link",
+        "com_empty": "com_mcp_link",
         "mesh":    True,
-        "mass":    0.01,
-        "inertia": (1e-5, 1e-5, 1e-5),
         "comment": "Space between MCP splay and flexion",
     },
     {
         "name":    "proximal_phalanx",
+        "com_empty": "com_proximal_phalanx",
         "mesh":    True,
-        "mass":    0.01,
-        "inertia": (1e-5, 1e-5, 1e-5),
         "comment": "Proximal phalanx",
     },
     {
         "name":    "middle_phalanx1",
+        "com_empty": "com_middle_phalanx1",
         "mesh":    True,
-        "mass":    0.008,
-        "inertia": (5e-6, 5e-6, 5e-6),
         "comment": "Middle phalanx 1 (four-bar coupler, dorsal)",
     },
     {
         "name":    "middle_phalanx2",
+        "com_empty": "com_middle_phalanx2",
         "mesh":    True,
-        "mass":    0.008,
-        "inertia": (5e-6, 5e-6, 5e-6),
         "comment": "Middle phalanx 2 (four-bar coupler, volar)",
     },
     {
         "name":    "distal_phalanx",
+        "com_empty": "com_distal_phalanx",
         "mesh":    True,
-        "mass":    0.005,
-        "inertia": (2e-6, 2e-6, 2e-6),
         "comment": "Distal phalanx",
     },
 ]
@@ -185,6 +181,49 @@ def get_empty_data(name):
     origin = tuple(round(c, 4) for c in loc)
     axis   = tuple(snap(c) for c in axis)
     return origin, axis
+
+def get_com_offset(link_name, com_empty_name):
+    link_world = link_world_poses[link_name]          # already computed
+    com_world  = get_empty_data(com_empty_name)[0]    # world position of COM empty
+    return tuple(round(com_world[i] - link_world[i], 4) for i in range(3))
+
+def get_mesh_volume(obj):
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    volume = bm.calc_volume(signed=True)
+    bm.free()
+    return abs(volume)  # m³ if Blender units are meters
+
+def get_inertia_tensor_solid(obj, mass, com_world):
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+
+    com = mathutils.Vector(com_world)
+    Ixx = Iyy = Izz = Ixy = Ixz = Iyz = 0.0
+    total_vol = 0.0
+
+    for face in bm.faces:
+        v = [obj.matrix_world @ vert.co - com for vert in face.verts]
+        a, b, c = v[0], v[1], v[2]
+
+        # Signed tet volume (origin + triangle)
+        vol = a.dot(b.cross(c)) / 6.0
+        total_vol += vol
+
+        # Inertia of this tet about COM (Tonon 2004 formula)
+        Ixx += vol * (a.y**2 + a.y*b.y + b.y**2 + a.y*c.y + b.y*c.y + c.y**2 +
+                      a.z**2 + a.z*b.z + b.z**2 + a.z*c.z + b.z*c.z + c.z**2)
+        Iyy += vol * (a.x**2 + a.x*b.x + b.x**2 + a.x*c.x + b.x*c.x + c.x**2 +
+                      a.z**2 + a.z*b.z + b.z**2 + a.z*c.z + b.z*c.z + c.z**2)
+        Izz += vol * (a.x**2 + a.x*b.x + b.x**2 + a.x*c.x + b.x*c.x + c.x**2 +
+                      a.y**2 + a.y*b.y + b.y**2 + a.y*c.y + b.y*c.y + c.y**2)
+
+    bm.free()
+
+    scale = mass / (20.0 * abs(total_vol)) if total_vol != 0 else 0
+    return Ixx * scale, Iyy * scale, Izz * scale
 
 def fmt_pose(xyz, rpy=(0, 0, 0)):
     return f"{xyz[0]} {xyz[1]} {xyz[2]} {rpy[0]} {rpy[1]} {rpy[2]}"
@@ -239,6 +278,17 @@ for obj in bpy.data.objects:
     obj.select_set(False)
     obj.matrix_world = saved_matrix
     exported.append(f"{obj.name} → {out_dir}")
+    
+# ── Link inertia and mass calc ───────────────────────────────────────────────────────────
+
+computed = {}
+for link in LINKS:
+    obj = bpy.data.objects.get(link["name"])
+    com = get_empty_data(link["com_empty"])[0]
+    vol = get_mesh_volume(obj)
+    mass = abs(vol) * DENSITY
+    ixx, iyy, izz = get_inertia_tensor_solid(obj, mass, com)
+    computed[link["name"]] = {"mass": mass, "inertia": (ixx, iyy, izz)}
 
 # ── Joint axes ─────────────────────────────────────────────────────────────────
 
@@ -302,37 +352,41 @@ with open(AXES_FILE, 'w') as f:
 
 def link_block_sdf(link):
     name          = link["name"]
-    mass          = link["mass"]
-    ixx, iyy, izz = link["inertia"]
+    mass          = computed[link["name"]]["mass"]
+    ixx, iyy, izz = computed[link["name"]]["inertia"]
     comment       = link["comment"]
     pkg           = PACKAGE_NAME
     pose          = link_world_poses.get(name, (0.0, 0.0, 0.0))
+    com_offset    = get_com_offset(name, link["com_empty"])
 
     lines = []
     lines.append(f'    <!-- {comment} -->')
     lines.append(f'    <link name="{name}">')
     lines.append(f'      <pose>{fmt_pose(pose)}</pose>')
 
+
     if link["mesh"]:
         lines.append(f'      <visual name="visual">')
         lines.append(f'        <geometry>')
         lines.append(f'          <mesh>')
-        lines.append(f'            <uri>package://{pkg}/meshes/visual/{name}.obj</uri>')
+        lines.append(f'            <uri>package://{pkg}/meshes/sdf/visual/{name}.obj</uri>')
         lines.append(f'          </mesh>')
         lines.append(f'        </geometry>')
         lines.append(f'      </visual>')
         lines.append(f'      <collision name="collision">')
         lines.append(f'        <geometry>')
         lines.append(f'          <mesh>')
-        lines.append(f'            <uri>package://{pkg}/meshes/collision/col_{name}.obj</uri>')
+        lines.append(f'            <uri>package://{pkg}/meshes/sdf/collision/col_{name}.obj</uri>')
         lines.append(f'          </mesh>')
         lines.append(f'        </geometry>')
         lines.append(f'      </collision>')
 
     lines.append(f'      <inertial>')
+    lines.append(f'        <pose>{fmt_pose(com_offset)}</pose>')
     lines.append(f'        <mass>{mass}</mass>')
     lines.append(f'        <inertia>{fmt_inertia_sdf(ixx, iyy, izz)}</inertia>')
     lines.append(f'      </inertial>')
+
     lines.append(f'    </link>')
 
     return '\n'.join(lines)
