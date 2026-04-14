@@ -12,10 +12,16 @@ class MotorTorqueToForceSystem(LeafSystem):
         """Create instance of MotorTorqueToForceSystem."""
         super().__init__()
 
-        # define raidus matrix
-        radius_matrix = np.eye(4) * 0.0025
+        # define radii
+        r1, r2 = 0.0025, 0.0025
 
-        self.R_inv = radius_matrix ** -1  # invert
+        # define raidus matrix
+        self.radius_matrix = np.array([[0, 1/r1, 0],
+                                       [0, 0, -1/r1],
+                                       [0, 1/r2, 0],
+                                       [0, 0, -1/r2]])
+
+        # self.R_inv = np.linalg.pinv(radius_matrix)  # invert
         nu = 3  # three acutators
         nf = 4  # four tendon tensions
 
@@ -26,4 +32,7 @@ class MotorTorqueToForceSystem(LeafSystem):
     def _calc_force(self, context, output):
         """Convert motor torque to tendon forces."""
         torque = self.input_port.Eval(context)
-        output.SetFromVector(self.R_inv @ torque)
+        tensions = self.radius_matrix @ torque
+        mask = tensions < 0
+        tensions[mask] = 0
+        output.SetFromVector(tensions)

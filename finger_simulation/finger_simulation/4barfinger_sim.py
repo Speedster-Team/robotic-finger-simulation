@@ -44,7 +44,7 @@ class FingerSimulation():
                                  self.sys_ros_interface.get_ros_interface())
 
         self.plant, self.scene_graph = AddMultibodyPlant(
-            MultibodyPlantConfig(time_step=0.01),
+            MultibodyPlantConfig(time_step=0.001),
             self.builder,
         )
 
@@ -114,12 +114,20 @@ class FingerSimulation():
             url='package://finger_simulation/models/grasspatch/model.sdf')
         parser.AddModels(
             url='package://finger_simulation/models/Standard_Toilet/model.sdf')
+        self.box, = parser.AddModels(
+            url='package://finger_simulation/models/box/model.sdf')
 
         base_frame = self.plant.GetFrameByName('base_link', self.finger)
         self.plant.WeldFrames(self.plant.world_frame(),
                               base_frame,
                               RigidTransform(RollPitchYaw([0, 0, 0]),
                                              np.array([0, 0, .1])))
+
+        box_frame = self.plant.GetFrameByName('box_frame', self.box)
+        self.plant.WeldFrames(self.plant.world_frame(),
+                              box_frame,
+                              RigidTransform(RollPitchYaw([0, 0, 0]),
+                                             np.array([0, 0.2, .05])))
 
         # close loop for four bar
         middle_phalanx2 = self.plant.GetBodyByName(
@@ -199,13 +207,16 @@ class FingerSimulation():
         """Start the simulation."""
         simulator = Simulator(self.diagram)
         simulator.Initialize()
-        time.sleep(3.0)  # delay 3 seconds
+        # time.sleep(5.0)  # delay 3 seconds
         simulator_context = simulator.get_mutable_context()
         simulator.set_target_realtime_rate(0)
 
         self.diagram.GetMutableSubsystemContext(self.plant, simulator_context)
 
-        step = 0.01
+        plant_context = self.diagram.GetMutableSubsystemContext(
+            self.plant, simulator_context)
+        
+        step = 0.001
         sim_time = float('inf')
         while simulator_context.get_time() < sim_time:
             next_time = min(
@@ -213,6 +224,18 @@ class FingerSimulation():
                 sim_time,
             )
             simulator.AdvanceTo(next_time)
+
+            # get contact forces on box
+            contact_results = self.plant.get_contact_results_output_port()\
+                .Eval(plant_context)
+            for i in range(contact_results.num_point_pair_contacts()):
+                info = contact_results.point_pair_contact_info(i)
+                body_A = self.plant.get_body(info.bodyA_index()).name()
+                body_B = self.plant.get_body(info.bodyB_index()).name()
+                if 'box' in body_A or 'box' in body_B:
+                    print(f't={simulator_context.get_time():.2f} '
+                        f'{body_A}<->{body_B} '
+                        f'force={info.contact_force()}')
 
 
 def main():
@@ -234,20 +257,25 @@ def main():
         FingerPulleySystem())
 
     fingersim.builder.Connect(
-        torque_system.get_output_port('motor_torque'),
-        motor_torque_to_force_system.get_input_port('motor_torque'),
+        torque_system.GetOutputPort('motor_torque'),
+        motor_torque_to_force_system.GetInputPort('motor_torque'),
     )
     fingersim.builder.Connect(
-        motor_torque_to_force_system.get_output_port('tendon_tension'),
-        motor_tension_to_joint_torque_system.get_input_port('tendon_tension'),
+        motor_torque_to_force_system.GetOutputPort('tendon_tension'),
+        motor_tension_to_joint_torque_system.GetInputPort('tendon_tension'),
     )
     fingersim.builder.Connect(
-        motor_torque_to_force_system.get_output_port('joint_torque'),
+        torque_system.GetOutputPort('motor_splay_torque'),
+        motor_tension_to_joint_torque_system.GetInputPort(
+            'motor_splay_torque'),
+    )
+    fingersim.builder.Connect(
+        motor_tension_to_joint_torque_system.GetOutputPort('joint_torque'),
         fingersim.plant.get_actuation_input_port(fingersim.finger),
     )
 
     fingersim.build_diagram()
-    fingersim.save_diagram()
+    # fingersim.save_diagram()
     fingersim.run()
 
 
