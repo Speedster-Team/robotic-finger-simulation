@@ -27,8 +27,8 @@
       </collision>
       <inertial>
         <pose>0.0 0.0 0.0 0 0 0</pose>
-        <mass>0.05241479382608486</mass>
-        <inertia><ixx>1.73861e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1.50119e-05</iyy><iyz>0</iyz><izz>8.65996e-06</izz></inertia>
+        <mass>0.07241006702640612</mass>
+        <inertia><ixx>2.40186e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>2.07387e-05</iyy><iyz>0</iyz><izz>1.19636e-05</izz></inertia>
       </inertial>
     </link>
 
@@ -51,8 +51,8 @@
       </collision>
       <inertial>
         <pose>0.0 -0.0196 -0.017 0 0 0</pose>
-        <mass>0.02253732576850662</mass>
-        <inertia><ixx>8.55639e-06</ixx><ixy>0</ixy><ixz>0</ixz><iyy>4.76436e-06</iyy><iyz>0</iyz><izz>6.18722e-06</izz></inertia>
+        <mass>0.03113489819130729</mass>
+        <inertia><ixx>1.18205e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>6.58187e-06</iyy><iyz>0</iyz><izz>8.54752e-06</izz></inertia>
       </inertial>
     </link>
 
@@ -75,8 +75,8 @@
       </collision>
       <inertial>
         <pose>-0.0014 -0.0374 -0.017 0 0 0</pose>
-        <mass>0.04981346881823438</mass>
-        <inertia><ixx>0.000130256</ixx><ixy>0</ixy><ixz>0</ixz><iyy>8.3049e-06</iyy><iyz>0</iyz><izz>0.000127495</izz></inertia>
+        <mass>0.06881638470074601</mass>
+        <inertia><ixx>0.000179946</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1.14731e-05</iyy><iyz>0</iyz><izz>0.000176132</izz></inertia>
       </inertial>
     </link>
 
@@ -99,8 +99,8 @@
       </collision>
       <inertial>
         <pose>0.0001 -0.0985 -0.0153 0 0 0</pose>
-        <mass>0.011833800203361498</mass>
-        <inertia><ixx>8.21989e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1.0509e-06</iyy><iyz>0</iyz><izz>8.19686e-05</izz></inertia>
+        <mass>0.0163481758364957</mass>
+        <inertia><ixx>0.000113556</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1.45179e-06</iyy><iyz>0</iyz><izz>0.000113238</izz></inertia>
       </inertial>
     </link>
 
@@ -123,8 +123,8 @@
       </collision>
       <inertial>
         <pose>0.0019 -0.1065 -0.0191 0 0 0</pose>
-        <mass>0.0021724981353969087</mass>
-        <inertia><ixx>1.70596e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>2.03633e-07</iyy><iyz>0</iyz><izz>1.68855e-05</izz></inertia>
+        <mass>0.0030012659426038777</mass>
+        <inertia><ixx>2.35676e-05</ixx><ixy>0</ixy><ixz>0</ixz><iyy>2.81316e-07</iyy><iyz>0</iyz><izz>2.33271e-05</izz></inertia>
       </inertial>
     </link>
 
@@ -147,8 +147,8 @@
       </collision>
       <inertial>
         <pose>-0.0036 -0.1391 -0.0131 0 0 0</pose>
-        <mass>0.008185004374548763</mass>
-        <inertia><ixx>0.000101888</ixx><ixy>0</ixy><ixz>0</ixz><iyy>3.71921e-07</iyy><iyz>0</iyz><izz>0.000101689</izz></inertia>
+        <mass>0.011307431969284031</mass>
+        <inertia><ixx>0.000140757</ixx><ixy>0</ixy><ixz>0</ixz><iyy>5.13801e-07</iyy><iyz>0</iyz><izz>0.000140482</izz></inertia>
       </inertial>
     </link>
 
@@ -168,7 +168,7 @@
           <velocity>10000.0</velocity>
         </limit>
         <dynamics>
-          <damping>0.001</damping>
+          <damping>0.0</damping>
           <friction>0.0</friction>
         </dynamics>
       </axis>
@@ -188,7 +188,7 @@
           <velocity>10000.0</velocity>
         </limit>
         <dynamics>
-          <damping>0.001</damping>
+          <damping>0.0</damping>
           <friction>0.0</friction>
         </dynamics>
       </axis>
@@ -208,7 +208,7 @@
           <velocity>10000.0</velocity>
         </limit>
         <dynamics>
-          <damping>0.001</damping>
+          <damping>0.0</damping>
           <friction>0.0</friction>
         </dynamics>
       </axis>
@@ -228,7 +228,7 @@
           <velocity>10000.0</velocity>
         </limit>
         <dynamics>
-          <damping>0.001</damping>
+          <damping>0.0</damping>
           <friction>0.0</friction>
         </dynamics>
       </axis>
@@ -248,7 +248,7 @@
           <velocity>10000.0</velocity>
         </limit>
         <dynamics>
-          <damping>0.001</damping>
+          <damping>0.0</damping>
           <friction>0.0</friction>
         </dynamics>
       </axis>

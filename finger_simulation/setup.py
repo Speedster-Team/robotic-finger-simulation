@@ -20,6 +20,7 @@ def recursive_files(prefix, path):
              [str(file) for file in subdir.glob('*') if not file.is_dir()]
              ) for subdir in Path(path).glob('**')]
 
+
 setup(
     name=package_name,
     version='0.0.0',

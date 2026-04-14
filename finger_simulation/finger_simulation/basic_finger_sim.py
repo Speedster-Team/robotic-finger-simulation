@@ -1,4 +1,8 @@
-################################## citation [0] begin ################################
+import drake_ros.core
+from drake_ros.core import ClockSystem, RosInterfaceSystem
+from drake_ros.tf2 import SceneTfBroadcasterParams, SceneTfBroadcasterSystem
+from drake_ros.viz import RvizVisualizer, RvizVisualizerParams
+
 import numpy as np
 
 from pydrake.geometry import DrakeVisualizer
@@ -8,20 +12,16 @@ from pydrake.multibody.plant import AddMultibodyPlant, MultibodyPlantConfig
 from pydrake.systems.analysis import Simulator
 from pydrake.systems.framework import DiagramBuilder, TriggerType
 from pydrake.systems.primitives import ConstantVectorSource
-from pydrake.systems.controllers import InverseDynamicsController
 
-import drake_ros.core
-from drake_ros.core import ClockSystem, RosInterfaceSystem
-from drake_ros.tf2 import SceneTfBroadcasterParams, SceneTfBroadcasterSystem
-from drake_ros.viz import RvizVisualizer, RvizVisualizerParams
 
 def main():
-    sim_time = float("inf")
+    """Start basic simulation."""
+    sim_time = float('inf')
 
     builder = DiagramBuilder()
     drake_ros.core.init()
 
-    sys_ros_interface = builder.AddSystem(RosInterfaceSystem("fingersim"))
+    sys_ros_interface = builder.AddSystem(RosInterfaceSystem('fingersim'))
     ClockSystem.AddToBuilder(builder, sys_ros_interface.get_ros_interface())
 
     plant, scene_graph = AddMultibodyPlant(
@@ -59,17 +59,18 @@ def main():
     )
 
     # Load finger model
-    model_file_url = "package://finger_description/urdf/finger.urdf"
+    model_file_url = 'package://finger_description/urdf/finger.urdf'
     urdf_parser = Parser(plant)
     urdf_parser.package_map().PopulateFromRosPackagePath()
     urdf_parser.package_map().Add(
-        "finger_description",
-        "/home/michael-jenz/rds_ws/finger_vizualization/install/finger_description/share/finger_description"
+        'finger_description',
+        '/home/michael-jenz/rds_ws/finger_vizualization/'
+        'install/finger_description/share/finger_description'
     )
     (finger,) = urdf_parser.AddModels(url=model_file_url)
-    plant.RenameModelInstance(model_instance=finger, name="speedster_finger")
+    plant.RenameModelInstance(model_instance=finger, name='speedster_finger')
 
-    base_frame = plant.GetFrameByName("base_link", finger)
+    base_frame = plant.GetFrameByName('base_link', finger)
     plant.WeldFrames(plant.world_frame(), base_frame, RigidTransform())
 
     plant.Finalize()
@@ -83,7 +84,7 @@ def main():
         plant.get_actuation_input_port(finger),
     )
 
-    _viz = DrakeVisualizer.AddToBuilder(builder, scene_graph)
+    DrakeVisualizer.AddToBuilder(builder, scene_graph)
 
     diagram = builder.Build()
     simulator = Simulator(diagram)
@@ -99,8 +100,6 @@ def main():
         )
         simulator.AdvanceTo(next_time)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()
-
-
-################################## citation [0] end ################################
