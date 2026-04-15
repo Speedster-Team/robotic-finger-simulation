@@ -432,6 +432,17 @@ sdf_lines.append(f'  <!-- Four-bar linkage: proximal_phalanx + middle_phalanx1/2
 sdf_lines.append(f'  <!-- Loop-closing joint: dip_flex2 (middle_phalanx2 → distal_phalanx) -->')
 sdf_lines.append('')
 
+# eliminate self collissions
+sdf_lines.append('    <drake:collision_filter_group name="finger_links">')
+sdf_lines.append('      <drake:member>base_link</drake:member>')
+sdf_lines.append('      <drake:member>mcp_link</drake:member>')
+sdf_lines.append('      <drake:member>proximal_phalanx</drake:member>')
+sdf_lines.append('      <drake:member>middle_phalanx1</drake:member>')
+sdf_lines.append('      <drake:member>middle_phalanx2</drake:member>')
+sdf_lines.append('      <drake:member>distal_phalanx</drake:member>')
+sdf_lines.append('      <drake:ignored_collision_filter_group>finger_links</drake:ignored_collision_filter_group>')
+sdf_lines.append('    </drake:collision_filter_group>')
+
 sdf_lines.append('    <!-- ═══════════════ LINKS ═══════════════ -->')
 sdf_lines.append('')
 for link in LINKS:

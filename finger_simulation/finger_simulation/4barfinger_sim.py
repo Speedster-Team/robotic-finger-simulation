@@ -225,7 +225,7 @@ class FingerSimulation():
             )
             simulator.AdvanceTo(next_time)
 
-            # get contact forces on box
+            # # get contact forces on box
             contact_results = self.plant.get_contact_results_output_port()\
                 .Eval(plant_context)
             for i in range(contact_results.num_point_pair_contacts()):
@@ -236,7 +236,13 @@ class FingerSimulation():
                     print(f't={simulator_context.get_time():.2f} '
                         f'{body_A}<->{body_B} '
                         f'force={info.contact_force()}')
-
+            # contact_results = self.plant.get_contact_results_output_port().Eval(plant_context)
+            # print(f'num contacts: {contact_results.num_point_pair_contacts()}')
+            # for i in range(contact_results.num_point_pair_contacts()):
+            #     info = contact_results.point_pair_contact_info(i)
+            #     body_A = self.plant.get_body(info.bodyA_index()).name()
+            #     body_B = self.plant.get_body(info.bodyB_index()).name()
+            #     print(f'  {body_A} <-> {body_B} force={info.contact_force()}')
 
 def main():
     """Set up and start simulation."""
