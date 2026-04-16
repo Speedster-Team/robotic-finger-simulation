@@ -1,7 +1,6 @@
 """Runs drake simulation of robotic finger."""
 
 import os
-import time
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -10,10 +9,15 @@ from drake_ros.core import ClockSystem, RosInterfaceSystem
 from drake_ros.tf2 import SceneTfBroadcasterParams, SceneTfBroadcasterSystem
 from drake_ros.viz import RvizVisualizer, RvizVisualizerParams
 
+from finger_simulation.systems.drake2ros_system import Drake2Ros
 from finger_simulation.systems.finger_pulley_system import FingerPulleySystem
-from finger_simulation.systems.motor_input_system import MotorSystem
+from finger_simulation.systems.motor_feedback_system import MotorFeedbackSystem
 from finger_simulation.systems.motor_radius_system import (
     MotorTorqueToForceSystem
+)
+from finger_simulation.systems.ros2drake_system import Ros2Drake
+from finger_simulation.systems.tendon_feedback_system import (
+    TendonFeedbackSystem
 )
 
 import numpy as np
@@ -25,9 +29,12 @@ from pydrake.geometry import MeshcatVisualizerParams
 from pydrake.math import RigidTransform, RollPitchYaw
 from pydrake.multibody.parsing import Parser
 from pydrake.multibody.plant import AddMultibodyPlant, MultibodyPlantConfig
+from pydrake.multibody.tree import JointIndex
 from pydrake.systems.analysis import Simulator
 from pydrake.systems.framework import DiagramBuilder, TriggerType
 from pydrake.systems.primitives import ConstantVectorSource
+
+import rclpy
 
 
 class FingerSimulation():
@@ -38,13 +45,16 @@ class FingerSimulation():
         self.builder = DiagramBuilder()
         drake_ros.core.init()
 
+        # init time step
+        self.dt = 0.001
+
         self.sys_ros_interface = self.builder.AddSystem(
             RosInterfaceSystem('fingersim'))
         ClockSystem.AddToBuilder(self.builder,
                                  self.sys_ros_interface.get_ros_interface())
 
         self.plant, self.scene_graph = AddMultibodyPlant(
-            MultibodyPlantConfig(time_step=0.001),
+            MultibodyPlantConfig(time_step=self.dt),
             self.builder,
         )
 
@@ -173,26 +183,6 @@ class FingerSimulation():
             self.plant.get_actuation_input_port(self.finger),
         )
 
-        # # ros topic torque commands
-        # nu = plant.num_actuated_dofs(finger)
-
-        # # Subscriber reads Float64MultiArray from /finger/torque_command
-        # torque_sub = builder.AddSystem(
-        #     RosSubscriberSystem(
-        #         SerializerInterface(Float64MultiArray),
-        #         "/cmd_torque",
-        #         QoSProfile(depth=1),
-        #         sys_ros_interface.get_ros_interface(),
-        #     )
-        # )
-
-        # ZeroOrderHold bridges the async ROS message into the Drake time-stepped system.
-        # It holds the last received value until a new one arrives.
-        # zoh = builder.AddSystem(ZeroOrderHold(period_sec=0.001, vector_size=nu))
-
-        # builder.Connect(torque_sub.get_output_port(0), zoh.get_input_port(0))
-        # builder.Connect(zoh.get_output_port(0), plant.get_actuation_input_port(finger))
-
     def build_diagram(self):
         """Build the diagram."""
         self.diagram = self.builder.Build()
@@ -207,7 +197,6 @@ class FingerSimulation():
         """Start the simulation."""
         simulator = Simulator(self.diagram)
         simulator.Initialize()
-        # time.sleep(5.0)  # delay 3 seconds
         simulator_context = simulator.get_mutable_context()
         simulator.set_target_realtime_rate(0)
 
@@ -215,34 +204,43 @@ class FingerSimulation():
 
         plant_context = self.diagram.GetMutableSubsystemContext(
             self.plant, simulator_context)
-        
-        step = 0.001
+
         sim_time = float('inf')
         while simulator_context.get_time() < sim_time:
             next_time = min(
-                simulator_context.get_time() + step,
+                simulator_context.get_time() + self.dt,
                 sim_time,
             )
             simulator.AdvanceTo(next_time)
 
-            # # get contact forces on box
-            contact_results = self.plant.get_contact_results_output_port()\
-                .Eval(plant_context)
-            for i in range(contact_results.num_point_pair_contacts()):
-                info = contact_results.point_pair_contact_info(i)
-                body_A = self.plant.get_body(info.bodyA_index()).name()
-                body_B = self.plant.get_body(info.bodyB_index()).name()
-                if 'box' in body_A or 'box' in body_B:
-                    print(f't={simulator_context.get_time():.2f} '
-                        f'{body_A}<->{body_B} '
-                        f'force={info.contact_force()}')
-            # contact_results = self.plant.get_contact_results_output_port().Eval(plant_context)
-            # print(f'num contacts: {contact_results.num_point_pair_contacts()}')
-            # for i in range(contact_results.num_point_pair_contacts()):
-            #     info = contact_results.point_pair_contact_info(i)
-            #     body_A = self.plant.get_body(info.bodyA_index()).name()
-            #     body_B = self.plant.get_body(info.bodyB_index()).name()
-            #     print(f'  {body_A} <-> {body_B} force={info.contact_force()}')
+    def debug(self):
+        """Debug print messages."""
+        nq = self.plant.num_positions(self.finger)
+        nv = self.plant.num_velocities(self.finger)
+        print(f'finger: nq={nq}, nv={nv}, state size={nq+nv}')
+        print()
+        print('Joints in this model instance:')
+        for i in range(self.plant.num_joints()):
+            j = self.plant.get_joint(JointIndex(i))
+            if j.model_instance() != self.finger:
+                continue
+            print(f'  {j.name():30s} type={type(j).__name__:20s} '
+                  f'nq={j.num_positions()} nv={j.num_velocities()} '
+                  f'q_start={j.position_start()} v_start={
+                        j.velocity_start()}')
+
+        # # # get contact forces on box
+        # contact_results = self.plant.get_contact_results_output_port()\
+        #     .Eval(plant_context)
+        # for i in range(contact_results.num_point_pair_contacts()):
+        #     info = contact_results.point_pair_contact_info(i)
+        #     body_A = self.plant.get_body(info.bodyA_index()).name()
+        #     body_B = self.plant.get_body(info.bodyB_index()).name()
+        #     if 'box' in body_A or 'box' in body_B:
+        #         print(f't={simulator_context.get_time():.2f} '
+        #             f'{body_A}<->{body_B} '
+        #             f'force={info.contact_force()}')
+
 
 def main():
     """Set up and start simulation."""
@@ -251,10 +249,16 @@ def main():
     fingersim.init_viz(enable_rviz=True)
     fingersim.load_scene()
 
-    # add external systems
-    nu = fingersim.plant.num_actuated_dofs(fingersim.finger)
+    # create and init ros node
+    rclpy.init(args=None)
+    node = rclpy.create_node('drakesim')
 
-    torque_system = fingersim.builder.AddSystem(MotorSystem(nu, '/cmd_torque'))
+    # define capstan gear ratio
+    gear_ratio = 3.5
+
+    # add external systems
+    ros2drake_system = fingersim.builder.AddSystem(Ros2Drake(node, gear_ratio))
+    drake2ros_system = fingersim.builder.AddSystem(Drake2Ros(node))
 
     motor_torque_to_force_system = fingersim.builder.AddSystem(
         MotorTorqueToForceSystem())
@@ -262,8 +266,14 @@ def main():
     motor_tension_to_joint_torque_system = fingersim.builder.AddSystem(
         FingerPulleySystem())
 
+    tendon_feedback_system = fingersim.builder.AddSystem(
+        TendonFeedbackSystem(gear_ratio))
+
+    motor_feedback_system = fingersim.builder.AddSystem(
+        MotorFeedbackSystem())
+
     fingersim.builder.Connect(
-        torque_system.GetOutputPort('motor_torque'),
+        ros2drake_system.GetOutputPort('motor_torque'),
         motor_torque_to_force_system.GetInputPort('motor_torque'),
     )
     fingersim.builder.Connect(
@@ -271,17 +281,37 @@ def main():
         motor_tension_to_joint_torque_system.GetInputPort('tendon_tension'),
     )
     fingersim.builder.Connect(
-        torque_system.GetOutputPort('motor_splay_torque'),
+        ros2drake_system.GetOutputPort('motor_splay_torque'),
         motor_tension_to_joint_torque_system.GetInputPort(
             'motor_splay_torque'),
+    )
+    fingersim.builder.Connect(
+        motor_feedback_system.GetOutputPort('motor_velocity'),
+        drake2ros_system.GetInputPort('motor_velocity'),
     )
     fingersim.builder.Connect(
         motor_tension_to_joint_torque_system.GetOutputPort('joint_torque'),
         fingersim.plant.get_actuation_input_port(fingersim.finger),
     )
+    fingersim.builder.Connect(
+        fingersim.plant.get_state_output_port(fingersim.finger),
+        tendon_feedback_system.GetInputPort('finger_state'),
+    )
+    fingersim.builder.Connect(
+        motor_torque_to_force_system.GetOutputPort('tendon_tension'),
+        tendon_feedback_system.GetInputPort('tendon_tension'),
+    )
+    fingersim.builder.Connect(
+        tendon_feedback_system.GetOutputPort('tendon_velocity'),
+        motor_feedback_system.GetInputPort('tendon_velocity'),
+    )
+    fingersim.builder.Connect(
+        tendon_feedback_system.GetOutputPort('splay_velocity'),
+        motor_feedback_system.GetInputPort('splay_velocity'),
+    )
 
     fingersim.build_diagram()
-    # fingersim.save_diagram()
+    fingersim.save_diagram()
     fingersim.run()
 
 
