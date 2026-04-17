@@ -6,12 +6,13 @@ cmake_minimum_required(VERSION 3.22)
 project(fingerlib)
 
 # Find all external libraries.
-# find_package(Eigen3 3.3 REQUIRED NO_MODULE)
-
+find_package(Armadillo REQUIRED)
 # Create a library.
 add_library(fingerlib
     include/fingerlib/pos_controller.hpp
     src/pos_controller.cpp
+    include/fingerlib/transforms.hpp
+    src/transforms.cpp
 )
 
 # Use target_include_directories so that #include"fingerlib/header.hpp" works
@@ -25,6 +26,10 @@ target_compile_options(fingerlib PUBLIC -Wall -Wextra -pedantic)
 
 # Enable c++23 support.
 target_compile_features(fingerlib PUBLIC cxx_std_23)
+
+target_link_libraries(fingerlib
+    ${ARMADILLO_LIBRARIES}
+)
 
 find_package(Doxygen)
 

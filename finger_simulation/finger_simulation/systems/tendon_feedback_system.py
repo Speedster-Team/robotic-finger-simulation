@@ -30,14 +30,15 @@ class TendonFeedbackSystem(LeafSystem):
         r9 = 9 * 0.001
         r10 = 9 * 0.001
 
+
         # Tendon Jacobian
-        self.Jt = np.array([[-r1,  r5,  r9],
-                            [r2, -r6, -r10],
-                            [-r3,  r7, 0],
-                            [r4, -r8, 0]])
-        
+        self.Jt = np.array([[-r1,  r5,  r9],   # Tendon 4 (Green Tendon - PIP Extensor)
+                            [r2, -r6, -r10],   # Tendon 1 (Red Tendon - PIP Flexor)
+                            [-r3,  r7, 0],   # Tendon 2 (Purple Tendon - MCP Extensor)
+                            [r4, -r8, 0]])  # Tendon 3 (Pink Tendon - MCP Flexor)
+
         # Tendon stiffness vector
-        self.k = np.array([0.1, 0.1, 0.1, 0.1])  # made up values for now
+        self.k = np.array([2500.0, 2500.0, 2500.0, 2500.0])
 
         # init size of input and output
         nq = 5  # five link positions
@@ -53,23 +54,29 @@ class TendonFeedbackSystem(LeafSystem):
             'finger_state', nq + nv)
         self.tendon_tension_input_port = self.DeclareVectorInputPort(
             'tendon_tension', nt)
-        self.DeclareVectorOutputPort('tendon_velocity', nt, self._tendon_vel)
-        self.DeclareVectorOutputPort('splay_velocity', nm, self._splay_vel)
+        self.DeclareVectorOutputPort(
+            'tendon_velocity', nt, self._tendon_vel)
+        self.DeclareVectorOutputPort(
+            'splay_velocity', nm, self._splay_vel)
+        self.DeclareVectorOutputPort(
+            'tendon_position', nt, self._tendon_pos)
+        self.DeclareVectorOutputPort(
+            'splay_position', nm, self._splay_pos)
 
         # structure of finger state
         # state x (size 10) = [q_splay, q_mcp_flex, q_pip1, q_dip1, q_pip2,
         #                      v_splay, v_mcp_flex, v_pip1, v_dip1, v_pip2]
 
     def _tendon_vel(self, context, output):
-        """Convert joint state to joint velocity."""
+        """Convert joint state to tendon velocity."""
         state = self.joint_state_input_port.Eval(context)
-        tension = self.tendon_tension_input_port.Eval(context)
+        # tension = self.tendon_tension_input_port.Eval(context)
 
         # filter out splay, mcp, and pip
         vels = state[5:8]
 
         # calculate tension extension due to force
-        stretch = tension * self.k  # do nothing with it for nowcb
+        # stretch = tension * self.k  # do nothing with it for nowcb
 
         # transform to tendon space
         output.SetFromVector(self.Jt @ vels)
@@ -80,3 +87,24 @@ class TendonFeedbackSystem(LeafSystem):
 
         # output play velocity
         output.SetFromVector(np.array([state[5] / self.gr]))
+
+    def _tendon_pos(self, context, output):
+        """Convert joint state to tendon position."""
+        state = self.joint_state_input_port.Eval(context)
+        # tension = self.tendon_tension_input_port.Eval(context)
+
+        # filter out splay, mcp, and pip
+        poses = state[0:3]
+
+        # calculate tension extension due to force
+        # stretch = tension * self.k  # do nothing with it for now
+
+        # transform to tendon space
+        output.SetFromVector(self.Jt @ poses)
+
+    def _splay_pos(self, context, output):
+        """Scale splay position by gearbox and output."""
+        state = self.joint_state_input_port.Eval(context)
+
+        # output play velocity
+        output.SetFromVector(np.array([state[0] / self.gr]))

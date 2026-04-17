@@ -30,7 +30,12 @@ class MotorFeedbackSystem(LeafSystem):
             'tendon_velocity', nt)
         self.splay_velocity_input_port = self.DeclareVectorInputPort(
             'splay_velocity', nm)
+        self.tendon_position_input_port = self.DeclareVectorInputPort(
+            'tendon_position', nt)
+        self.splay_position_input_port = self.DeclareVectorInputPort(
+            'splay_position', nm)
         self.DeclareVectorOutputPort('motor_velocity', 3, self._motor_vel)
+        self.DeclareVectorOutputPort('motor_position', 3, self._motor_pos)
 
     def _motor_vel(self, context, output):
         """Convert tendon velocity to motor velocity."""
@@ -45,3 +50,17 @@ class MotorFeedbackSystem(LeafSystem):
 
         # transform to tendon space
         output.SetFromVector(vels)
+
+    def _motor_pos(self, context, output):
+        """Convert tendon position to motor velocity."""
+        tendon_pos = self.tendon_position_input_port.Eval(context)
+        splay_pos = self.splay_position_input_port.Eval(context)
+
+        # compute motor vels
+        positions = self.radius_matrix.T @ tendon_pos
+
+        # add on splay velocity
+        positions[0] += splay_pos
+
+        # transform to tendon space
+        output.SetFromVector(positions)

@@ -24,7 +24,7 @@ Drake must be installed on system as well as on drake_ros built locally in a ove
         cd ~/drake_ws/src
         git clone https://github.com/RobotLocomotion/drake-ros.git
 
-4. Build the drake overlay workspace. Build using gcc in a 
+4. Build the drake overlay workspace. Build using gcc in ~/drake_ws.
 
         source /opt/ros/kilted/setup.bash
         export CC=gcc-13
@@ -39,7 +39,7 @@ Drake must be installed on system as well as on drake_ros built locally in a ove
 
 5. Source overlay workspace, add this to bashrc
 
-        source ~/ws_drake_ros/install/setup.bash
+        source ~/drake_ws/install/setup.bash
 
 
 ## Usage Instructions

@@ -20,32 +20,42 @@ class Drake2Ros(LeafSystem):
         # save node
         self._node = node
 
-        # Set subscriber
-        self._latest_torque = np.zeros(self.nu)
-        self._sub = self._node.create_subscription(
-            Float64MultiArray,
-            '/cmd_torque',
-            self._ros_callback,
-            10,
-        )
-
         # Input port for motor velocity
         self.vel_input_port = self.DeclareVectorInputPort(
             'motor_velocity', self.nu
         )
 
+        # Input port for motor position
+        self.pos_input_port = self.DeclareVectorInputPort(
+            'motor_position', self.nu
+        )
+
         # init publisher
-        self._pub = self._node.create_publisher(
+        self._vel_pub = self._node.create_publisher(
             Float64MultiArray,
             '/motor_velocity',
             10
         )
 
+        # init publisher
+        self._pos_pub = self._node.create_publisher(
+            Float64MultiArray,
+            '/motor_position',
+            10
+        )
+
         # create event to publish at specified freq
         self.DeclarePeriodicPublishEvent(
-            period_sec=1.0/100.0,   # 800 Hz
+            period_sec=1.0/100.0,   # 100 Hz
             offset_sec=0.0,
             publish=self._publish_motor_velocity,
+        )
+
+        # create event to publish at specified freq
+        self.DeclarePeriodicPublishEvent(
+            period_sec=1.0/100.0,   # 100 Hz
+            offset_sec=0.0,
+            publish=self._publish_motor_position,
         )
 
     def _calc_flex_torque(self, context, output):
@@ -56,7 +66,7 @@ class Drake2Ros(LeafSystem):
     def _calc_splay_torque(self, context, output):
         """Filter input torques for only splay motor torques."""
         state = context.get_discrete_state(self.state_index).get_value()
-        output.SetFromVector(state[-1:] * self.gear_ratio)
+        output.SetFromVector(state[:1] * self.gear_ratio)
 
     def _ros_callback(self, msg):
         """Save new torque topic messages."""
@@ -73,4 +83,11 @@ class Drake2Ros(LeafSystem):
         vel = self.vel_input_port.Eval(context)
         msg = Float64MultiArray()
         msg.data = vel.tolist()
-        self._pub.publish(msg)
+        self._vel_pub.publish(msg)
+
+    def _publish_motor_position(self, context):
+        """Publish the motor position on a ROS topic."""
+        pos = self.pos_input_port.Eval(context)
+        msg = Float64MultiArray()
+        msg.data = pos.tolist()
+        self._pos_pub.publish(msg)

@@ -27,7 +27,7 @@ AXES_FILE     = os.path.join(MESHES_DIR, "joint_axes.yaml")
 PACKAGE_NAME  = "finger_description"
 ROBOT_NAME    = "finger"
 DENSITY       = 2700.0 * 0.8 + 7850.0 * 0.2 # aluminum density kg/m³ * percent composition + steel desnity * percent composition
-DAMPING       = 0.0
+DAMPING       = 0.01
 os.makedirs(VISUAL_DIR, exist_ok=True)
 os.makedirs(COLLISION_DIR, exist_ok=True)
 os.makedirs(os.path.dirname(SDF_PATH), exist_ok=True)
@@ -181,11 +181,6 @@ def get_empty_data(name):
     origin = tuple(round(c, 4) for c in loc)
     axis   = tuple(snap(c) for c in axis)
     return origin, axis
-
-def get_com_offset(link_name, com_empty_name):
-    link_world = link_world_poses[link_name]          # already computed
-    com_world  = get_empty_data(com_empty_name)[0]    # world position of COM empty
-    return tuple(round(com_world[i] - link_world[i], 4) for i in range(3))
 
 def get_mesh_volume(obj):
     bm = bmesh.new()
@@ -357,7 +352,7 @@ def link_block_sdf(link):
     comment       = link["comment"]
     pkg           = PACKAGE_NAME
     pose          = link_world_poses.get(name, (0.0, 0.0, 0.0))
-    com_offset    = get_com_offset(name, link["com_empty"])
+    com_offset    = [0, 0, 0]
 
     lines = []
     lines.append(f'    <!-- {comment} -->')
