@@ -30,12 +30,13 @@ class TendonFeedbackSystem(LeafSystem):
         r9 = 9 * 0.001
         r10 = 9 * 0.001
 
-
         # Tendon Jacobian
-        self.Jt = np.array([[-r1,  r5,  r9],   # Tendon 4 (Green Tendon - PIP Extensor)
-                            [r2, -r6, -r10],   # Tendon 1 (Red Tendon - PIP Flexor)
-                            [-r3,  r7, 0],   # Tendon 2 (Purple Tendon - MCP Extensor)
-                            [r4, -r8, 0]])  # Tendon 3 (Pink Tendon - MCP Flexor)
+        Jt = np.array([[r3, r7, 0],  # mcp extension
+                       [r4, -r8, 0],  # mcp flex
+                       [-r1, r5, r9],  # pip extension
+                       [r2, -r6, -r10]])  # pip extension
+
+        self.Jt_inv = np.linalg.pinv(Jt)
 
         # Tendon stiffness vector
         self.k = np.array([2500.0, 2500.0, 2500.0, 2500.0])
@@ -79,14 +80,14 @@ class TendonFeedbackSystem(LeafSystem):
         # stretch = tension * self.k  # do nothing with it for nowcb
 
         # transform to tendon space
-        output.SetFromVector(self.Jt @ vels)
+        output.SetFromVector(self.Jt_inv.T @ vels)
 
     def _splay_vel(self, context, output):
         """Scale splay velocity by gearbox and output."""
         state = self.joint_state_input_port.Eval(context)
 
         # output play velocity
-        output.SetFromVector(np.array([state[5] / self.gr]))
+        output.SetFromVector(np.array([state[5] * self.gr]))
 
     def _tendon_pos(self, context, output):
         """Convert joint state to tendon position."""
@@ -100,11 +101,11 @@ class TendonFeedbackSystem(LeafSystem):
         # stretch = tension * self.k  # do nothing with it for now
 
         # transform to tendon space
-        output.SetFromVector(self.Jt @ poses)
+        output.SetFromVector(self.Jt_inv.T @ poses)
 
     def _splay_pos(self, context, output):
         """Scale splay position by gearbox and output."""
         state = self.joint_state_input_port.Eval(context)
 
         # output play velocity
-        output.SetFromVector(np.array([state[0] / self.gr]))
+        output.SetFromVector(np.array([state[0] * self.gr]))

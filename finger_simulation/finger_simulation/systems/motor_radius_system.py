@@ -16,10 +16,10 @@ class MotorTorqueToForceSystem(LeafSystem):
         r1, r2 = 0.0025, 0.0025
 
         # define raidus matrix
-        self.radius_matrix = np.array([[0, 1/r1, 0],
-                                       [0, 0, -1/r1],
-                                       [0, 1/r2, 0],
-                                       [0, 0, -1/r2]])
+        self.radius_matrix = np.array([[0, 1/r1, 0],  # mcp
+                                       [0, -1/r1, 0],  # mcp
+                                       [0, 0, 1/r2],  # pip
+                                       [0, 0, -1/r2]])  # pip
 
         # self.R_inv = np.linalg.pinv(radius_matrix)  # invert
         nu = 3  # three acutators

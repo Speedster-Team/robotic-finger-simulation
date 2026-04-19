@@ -21,7 +21,7 @@ class Ros2Drake(LeafSystem):
         self._node = node
 
         # define splay gear ratio
-        self.gear_ratio = gear_ratio
+        self.gr = gear_ratio
 
         # Internal state: holds the last received torque command
         # This is the ZOH behavior — persists until next message
@@ -55,7 +55,7 @@ class Ros2Drake(LeafSystem):
     def _calc_splay_torque(self, context, output):
         """Filter input torques for only splay motor torques."""
         state = context.get_discrete_state(self.state_index).get_value()
-        output.SetFromVector(state[:1] * self.gear_ratio)
+        output.SetFromVector(state[:1] / self.gr)
 
     def _ros_callback(self, msg):
         """Save new torque topic messages."""

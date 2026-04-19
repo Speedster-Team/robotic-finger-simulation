@@ -219,7 +219,7 @@ class FingerSimulation():
             )
             simulator.AdvanceTo(next_time)
 
-            # self.debug()
+            self.debug()
 
     def debug(self):
         """Debug print messages."""
@@ -331,7 +331,7 @@ def main():
     )
 
     fingersim.build_diagram()
-    # fingersim.save_diagram()
+    fingersim.save_diagram()
     fingersim.run()
 
 

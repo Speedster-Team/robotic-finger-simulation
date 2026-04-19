@@ -32,10 +32,10 @@ class FingerPulleySystem(LeafSystem):
         r10 = 9 * 0.001
 
         # Tendon Jacobian
-        self.Jt = np.array([[-r1,  r5,  r9],   # Tendon 4 (Green Tendon - PIP Extensor)
-                            [r2, -r6, -r10],   # Tendon 1 (Red Tendon - PIP Flexor)
-                            [-r3,  r7, 0],   # Tendon 2 (Purple Tendon - MCP Extensor)
-                            [r4, -r8, 0]])  # Tendon 3 (Pink Tendon - MCP Flexor)
+        self.Jt = np.array([[r3, r7, 0],  # mcp extension
+                           [r4, -r8, 0],  # mcp flex
+                           [-r1, r5, r9],  # pip extension
+                           [r2, -r6, -r10]])  # pip extension
 
         # init size of input and output
         nu = 4  # four input tendon tensions

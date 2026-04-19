@@ -16,10 +16,13 @@ class MotorFeedbackSystem(LeafSystem):
         r1, r2 = 0.0025, 0.0025
 
         # define raidus matrix
-        self.radius_matrix = np.array([[0, 1/r1, 0],
-                                       [0, 0, -1/r1],
-                                       [0, 1/r2, 0],
-                                       [0, 0, -1/r2]])
+        # motor 0 - splay
+        # motor 1 - mcp
+        # motor 2 - pip
+        self.radius_matrix_inv = np.array([[0, r1, 0],  # mcp
+                                           [0, -r1, 0],  # mcp
+                                           [0, 0, r2],  # pip
+                                           [0, 0, -r2]])  # pip
 
         # init size of input and output
         nt = 4  # four tendon velocities
@@ -43,7 +46,7 @@ class MotorFeedbackSystem(LeafSystem):
         splay_vel = self.splay_velocity_input_port.Eval(context)
 
         # compute motor vels
-        vels = self.radius_matrix.T @ tendon_vel
+        vels = self.radius_matrix_inv.T @ tendon_vel
 
         # add on splay velocity
         vels[0] += splay_vel
@@ -57,7 +60,7 @@ class MotorFeedbackSystem(LeafSystem):
         splay_pos = self.splay_position_input_port.Eval(context)
 
         # compute motor vels
-        positions = self.radius_matrix.T @ tendon_pos
+        positions = self.radius_matrix_inv.T @ tendon_pos
 
         # add on splay velocity
         positions[0] += splay_pos
