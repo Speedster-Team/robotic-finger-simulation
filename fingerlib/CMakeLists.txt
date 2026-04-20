@@ -7,12 +7,13 @@ project(fingerlib)
 
 # Find all external libraries.
 find_package(Armadillo REQUIRED)
+find_package(modern_robotics REQUIRED)
 # Create a library.
 add_library(fingerlib
     include/fingerlib/pos_controller.hpp
     src/pos_controller.cpp
-    include/fingerlib/transforms.hpp
-    src/transforms.cpp
+    include/fingerlib/transformer.hpp
+    src/transformer.cpp
 )
 
 # Use target_include_directories so that #include"fingerlib/header.hpp" works
@@ -29,6 +30,9 @@ target_compile_features(fingerlib PUBLIC cxx_std_23)
 
 target_link_libraries(fingerlib
     ${ARMADILLO_LIBRARIES}
+)
+target_link_libraries(fingerlib
+    ${MODERN_ROBOTICS_LIBRARIES}
 )
 
 find_package(Doxygen)
