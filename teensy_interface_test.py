@@ -18,6 +18,13 @@ commands = [
 
 def format_command(positions):
     """Convert a list of positions to a string the Teensy can parse."""
+    ### STRUCTURE
+    # first line <command_type> <message_length> <frequency> <repeat>  example: "p 10 100 1" for position of length 10 at 100hz that is repeated
+    # data <mcp_splay> <mcp_flex> <pip_flex>
+    # last line "end"
+
+    ### RESPONE
+    # <command_type> <message_length> <repeat> <frequency> <actual_message_recieved_length>
     return ",".join(str(p) for p in positions) + "\n"
 
 def main():
@@ -39,5 +46,6 @@ def main():
 
     print("Done.")
 
+# 
 if __name__ == "__main__":
     main()
