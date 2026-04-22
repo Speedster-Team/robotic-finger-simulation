@@ -1,6 +1,7 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/float32_multi_array.hpp"
@@ -16,13 +17,22 @@ public:
   {
     // create publisher
     publisher_ = this->create_publisher<std_msgs::msg::Float32MultiArray>("sub", 10);
-
+    int count = 0;
     // define timer callback and init
     auto timer_callback =
-      [this]() -> void {
+      [this, &count]() -> void {
         auto message = std_msgs::msg::Float32MultiArray();
-        message.data = {0.1, 0.1, 0.1};
+        if (count % 2 == 0){
+            message.data = {.1, 0.1, 0.1};
+        }
+        else {
+            message.data = {-.1, 0.1, 0.1};
+        }
+        
         this->publisher_->publish(message);
+        count++;
+
+
       };
     timer_ = this->create_wall_timer(500ms, timer_callback);
 
