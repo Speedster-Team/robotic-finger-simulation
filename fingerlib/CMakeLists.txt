@@ -32,8 +32,13 @@ target_link_libraries(fingerlib
     ${ARMADILLO_LIBRARIES}
 )
 target_link_libraries(fingerlib
-    ${MODERN_ROBOTICS_LIBRARIES}
+    modern_robotics::modern_robotics
 )
+
+find_package(Catch2 3 REQUIRED)
+
+add_executable(tests tests/test_transformer.cpp)
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain fingerlib)
 
 find_package(Doxygen)
 

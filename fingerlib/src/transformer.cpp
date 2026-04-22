@@ -1,7 +1,7 @@
 #include "fingerlib/transformer.hpp"
 #include "modern_robotics/velocity_kinematics_and_statics.hpp"
 
-Transformer::Transformer(const arma::mat& Ra, const arma::mat& structure, const std::vector<arma::vec6>& screw_axes, const arma::vec& four_bar_lengths)
+Transformer::Transformer(const arma::mat& Ra, const arma::mat& structure, const std::vector<arma::vec6>& screw_axes, const std::vector<double>& four_bar_lengths)
     : _Ra(Ra), _Ra_inv(arma::pinv(_Ra)), 
       _structure(structure), _structure_inv(arma::pinv(_structure)), 
       _screw_axes(screw_axes), _4bar_lengths(four_bar_lengths)
@@ -10,7 +10,7 @@ Transformer::Transformer(const arma::mat& Ra, const arma::mat& structure, const 
 
 arma::vec Transformer::joint_to_motor(const arma::vec& q_joint)
 {
-    arma::vec q_tendon = _structure * q_joint;
+    arma::vec q_tendon = _structure.t() * q_joint;
     arma::vec q_motor = _Ra_inv * q_tendon;
     return q_motor;
 }
@@ -18,7 +18,7 @@ arma::vec Transformer::joint_to_motor(const arma::vec& q_joint)
 arma::vec Transformer::motor_to_joint(const arma::vec& q_motor)
 {
     arma::vec q_tendon = _Ra * q_motor;
-    arma::vec q_joint = _structure_inv * q_tendon;
+    arma::vec q_joint = _structure_inv.t() * q_tendon;
     return q_joint;
 }
 
@@ -41,10 +41,10 @@ void Transformer::calculate_4bar_ratios(
     double& dip_angle,
     double& speed_ratio)
 {
-    const double L1 = _4bar_lengths(0);
-    const double L2 = _4bar_lengths(1);
-    const double L3 = _4bar_lengths(2);
-    const double L4 = _4bar_lengths(3);
+    const double L1 = _4bar_lengths[0];
+    const double L2 = _4bar_lengths[1];
+    const double L3 = _4bar_lengths[2];
+    const double L4 = _4bar_lengths[3];
     
     // --- precompute reused trig terms ---
     const double t = (M_PI / 180.0) * pip_angle;
