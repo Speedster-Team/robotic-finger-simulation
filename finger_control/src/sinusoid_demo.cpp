@@ -68,18 +68,12 @@ const std::vector<double> four_bar_lengths = {
     8.91536 * 0.001,
     37 * 0.001
 };
-
 int main() {
-
-    // create the sine wave
     auto transforms = Transformer{Ra, St, slist, four_bar_lengths};
     auto generator = Sinusoid{transforms, 100};    
-
     auto q_motor_list = generator.generate_sinusoid(0, 0.4, 1, 0.8);
 
-    // Serial setup
     serial::Serial my_serial(port, baud, serial::Timeout::simpleTimeout(1000));
-
     if (my_serial.isOpen()) {
         std::cout << "Serial port opened successfully" << std::endl;
     } else {
@@ -87,37 +81,66 @@ int main() {
         return 1;
     }
 
-    // setup basic commands
-    std::string start_command = "s " + std::to_string(q_motor_list.size()) + " 1\n";
-    std::cout << "Start command: " << start_command << std::endl;
-    uint8_t checksum = 0x00;
-
-    my_serial.write(start_command);
-    for(auto q_motor: q_motor_list){
-        std::string data = std::to_string(q_motor(0)) + " " + 
-                            std::to_string(q_motor(1)) + " " + 
-                            std::to_string(q_motor(2)) + "\n";
-
-        std::cout << data;
-
-        checksum ^= crc8(reinterpret_cast<const uint8_t*>(data.data()), data.size());
-        my_serial.write(data);
+    // Build data lines first so we can CRC them the same way Teensy does
+    std::vector<std::string> data_lines;
+    for (auto& q_motor : q_motor_list) {
+        data_lines.push_back(
+            std::to_string(q_motor(0)) + " " +
+            std::to_string(q_motor(1)) + " " +
+            std::to_string(q_motor(2))   // no \n yet — match Teensy's strlen behavior
+        );
     }
-    std::string end_command = std::to_string(checksum) + " end\n";
-    std::cout << "End command: " << end_command << std::endl;
 
-    my_serial.write(end_command);
+    // CRC over data lines only (indices 1..N-1 on Teensy = all data lines here)
+    // Mirror crc8_message: iterate lines, iterate bytes via CRC8 table
+    auto build_table = [](uint8_t tbl[256]) {
+        for (int i = 0; i < 256; i++) {
+            uint8_t crc = i;
+            for (int b = 0; b < 8; b++)
+                crc = (crc & 0x80) ? (crc << 1) ^ 0x07 : (crc << 1);
+            tbl[i] = crc;
+        }
+    };
+    uint8_t crc_table[256];
+    build_table(crc_table);
 
-    std::string expected_stats = std::to_string(q_motor_list.size()) + " " + std::to_string(checksum) + "\n";
+    uint8_t checksum = 0x00;
+    for (auto& line : data_lines) {
+        for (unsigned char c : line)
+            checksum = crc_table[checksum ^ c];
+    }
 
+    // Assemble payload
+    std::string payload = "s " + std::to_string(q_motor_list.size()) + " 1\n";
+    for (auto& line : data_lines)
+        payload += line + "\n";
+    payload += std::to_string(checksum) + "\n";
+    payload += "end\n";   // "end" on its own line
+
+    std::cout << "Sending " << data_lines.size() << " motor position lines." << std::endl;
+    my_serial.write(payload);
+
+    // Teensy responds: "<type> <repeat> <lineCount> <error>\n"
+    // lineCount = messageLineCount = header + data_lines + footer = N+2
     std::string response = my_serial.readline();
-    std::string stats = my_serial.readline();
-    if(response != start_command || stats != expected_stats){
-        std::cerr << "Unexpected response from microcontroller: " << std::endl;
-        std::cerr << "\tReceived response: " << response << std::endl;
-        std::cerr << "\tReceived stats: " << stats << std::endl;
+    std::cout << "Teensy response: " << response << std::endl;
+
+    // Parse and validate
+    char resp_type; int resp_repeat, resp_linecount, resp_recieved_chksm, resp_computed_chksm, resp_error;
+    if (sscanf(response.c_str(), "%c %d %d %d %d %d",
+               &resp_type, &resp_repeat, &resp_linecount, &resp_recieved_chksm, &resp_computed_chksm, &resp_error) == 6) {
+        if (resp_error != 0) {
+            std::cerr << "Teensy reported error code: " << resp_error << std::endl;
+        } else {
+            std::cout << "OK — type=" << resp_type
+                      << " repeat=" << resp_repeat
+                      << " lines=" << resp_linecount
+                      << " recieved_chksm=" << resp_recieved_chksm
+                      << " computed_chksm=" << resp_computed_chksm
+                      << " error=" << resp_error << std::endl;
+        }
     } else {
-        std::cout << "Received expected response from microcontroller." << std::endl;
+        std::cerr << "Could not parse Teensy response." << std::endl;
     }
 
     my_serial.close();
