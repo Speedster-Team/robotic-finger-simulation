@@ -22,7 +22,7 @@ arma::vec Transformer::motor_to_joint(const arma::vec& q_motor)
     return q_joint;
 }
 
-arma::vec Transformer::get_jacobian_space(const arma::vec& q_joint)
+arma::mat Transformer::get_jacobian_space(const arma::vec& q_joint)
 {
     //TODO: come back to this and make sure its correct
     arma::mat J_full = mr::JacobianSpace(_screw_axes, q_joint);
