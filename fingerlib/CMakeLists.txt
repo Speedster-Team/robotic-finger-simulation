@@ -14,6 +14,8 @@ add_library(fingerlib
     src/pos_controller.cpp
     include/fingerlib/transformer.hpp
     src/transformer.cpp
+    include/fingerlib/sinusoid.hpp
+    src/sinusoid.cpp
 )
 
 # Use target_include_directories so that #include"fingerlib/header.hpp" works

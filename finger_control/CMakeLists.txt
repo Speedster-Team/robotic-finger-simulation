@@ -7,14 +7,24 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(std_msgs REQUIRED)
+find_package(serial REQUIRED)
+find_package(rclcpp REQUIRED) 
+find_package(fingerlib REQUIRED PATHS
+  /home/maxhu/rds_ws/rds-finger-sim/install/fingerlib/lib/cmake/fingerlib
+)
+find_package(modern_robotics REQUIRED)
 
-add_executable(serial_test src/serial_test.cpp)
+add_executable(sinusoid_demo src/sinusoid_demo.cpp)
 
-target_link_libraries(serial_test PRIVATE
+target_include_directories(sinusoid_demo PUBLIC
+  ${serial_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../fingerlib/include
+)
+
+target_link_libraries(sinusoid_demo PUBLIC
   rclcpp::rclcpp
-  ${std_msgs_TARGETS}
+  ${serial_LIBRARIES}
+  fingerlib::fingerlib
 )
 
 # uncomment the following section in order to fill in
@@ -33,7 +43,7 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-install(TARGETS serial_test
+install(TARGETS sinusoid_demo
   DESTINATION lib/${PROJECT_NAME}
 )
 
