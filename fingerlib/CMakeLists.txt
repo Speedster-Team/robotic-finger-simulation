@@ -8,6 +8,7 @@ project(fingerlib)
 # Find all external libraries.
 find_package(Armadillo REQUIRED)
 find_package(modern_robotics REQUIRED)
+
 # Create a library.
 add_library(fingerlib
     include/fingerlib/pos_controller.hpp
@@ -30,17 +31,20 @@ target_compile_options(fingerlib PUBLIC -Wall -Wextra -pedantic)
 # Enable c++23 support.
 target_compile_features(fingerlib PUBLIC cxx_std_23)
 
-target_link_libraries(fingerlib
+target_link_libraries(fingerlib PRIVATE
     ${ARMADILLO_LIBRARIES}
-)
-target_link_libraries(fingerlib
     modern_robotics::modern_robotics
 )
 
 find_package(Catch2 3 REQUIRED)
 
 add_executable(tests tests/test_transformer.cpp)
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain fingerlib)
+target_link_libraries(tests PRIVATE 
+    Catch2::Catch2WithMain 
+    fingerlib
+    ${ARMADILLO_LIBRARIES}
+    modern_robotics::modern_robotics
+    )
 
 find_package(Doxygen)
 

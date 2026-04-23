@@ -69,7 +69,7 @@ const std::vector<double> four_bar_lengths = {
     37 * 0.001
 };
 
-int main(int argc, char **argv) {
+int main() {
 
     // create the sine wave
     auto transforms = Transformer{Ra, St, slist, four_bar_lengths};
@@ -114,8 +114,8 @@ int main(int argc, char **argv) {
     std::string stats = my_serial.readline();
     if(response != start_command || stats != expected_stats){
         std::cerr << "Unexpected response from microcontroller: " << std::endl;
-        std::cerr << "Received response: " << response << std::endl;
-        std::cerr << "Received stats: " << stats << std::endl;
+        std::cerr << "\tReceived response: " << response << std::endl;
+        std::cerr << "\tReceived stats: " << stats << std::endl;
     } else {
         std::cout << "Received expected response from microcontroller." << std::endl;
     }
