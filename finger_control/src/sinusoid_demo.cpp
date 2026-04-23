@@ -23,7 +23,7 @@ uint8_t crc8(const uint8_t* data, size_t length) {
     return crc;
 }
 
-std::string port = "/dev/ttyUSB0";  // adjust to your port
+std::string port = "/dev/ttyACM0";  // adjust to your port
 uint32_t baud = 115200;             // adjust to your baud rate
 
 // Radius Matrix
@@ -89,6 +89,7 @@ int main(int argc, char **argv) {
 
     // setup basic commands
     std::string start_command = "s " + std::to_string(q_motor_list.size()) + " 1\n";
+    std::cout << "Start command: " << start_command << std::endl;
     uint8_t checksum = 0x00;
 
     my_serial.write(start_command);
@@ -97,12 +98,27 @@ int main(int argc, char **argv) {
                             std::to_string(q_motor(1)) + " " + 
                             std::to_string(q_motor(2)) + "\n";
 
+        std::cout << data;
+
         checksum ^= crc8(reinterpret_cast<const uint8_t*>(data.data()), data.size());
         my_serial.write(data);
     }
     std::string end_command = std::to_string(checksum) + " end\n";
+    std::cout << "End command: " << end_command << std::endl;
 
     my_serial.write(end_command);
+
+    std::string expected_stats = std::to_string(q_motor_list.size()) + " " + std::to_string(checksum) + "\n";
+
+    std::string response = my_serial.readline();
+    std::string stats = my_serial.readline();
+    if(response != start_command || stats != expected_stats){
+        std::cerr << "Unexpected response from microcontroller: " << std::endl;
+        std::cerr << "Received response: " << response << std::endl;
+        std::cerr << "Received stats: " << stats << std::endl;
+    } else {
+        std::cout << "Received expected response from microcontroller." << std::endl;
+    }
 
     my_serial.close();
     return 0;
