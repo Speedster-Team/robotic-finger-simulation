@@ -16,7 +16,7 @@ public:
   : Node("finger_control"), count_(0)
   {
     // create publisher
-    publisher_ = this->create_publisher<std_msgs::msg::Float32MultiArray>("sub", 10);
+    publisher_ = create_publisher<std_msgs::msg::Float32MultiArray>("sub", 10);
     int count = 0;
     // define timer callback and init
     auto timer_callback =
@@ -29,7 +29,7 @@ public:
             message.data = {-.1, 0.1, 0.1};
         }
         
-        this->publisher_->publish(message);
+        publisher_->publish(message);
         count++;
 
 
