@@ -19,7 +19,7 @@ public:
     /// \param amp - The amplitude of the sinusoid (in radians)
     /// \param freq - The frequency of the sinusoid (in Hz)
     /// \param v_shift - The vertical shift of the sinusoid (in radians)
-    std::vector<arma::vec> generate_sinusoid(int joint, double amp, int freq, double v_shift);
+    std::vector<arma::vec> generate_sinusoid(int joint, double amp, double freq, double v_shift);
 
 private:
     /// \brief The transformer object for converting between joint and motor space

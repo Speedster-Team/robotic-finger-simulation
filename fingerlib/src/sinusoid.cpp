@@ -8,7 +8,7 @@ Sinusoid::Sinusoid(const Transformer& transforms, int sampling_rate)
 {
 }
 
-std::vector<arma::vec> Sinusoid::generate_sinusoid(int joint, double amp, int freq, double v_shift){
+std::vector<arma::vec> Sinusoid::generate_sinusoid(int joint, double amp, double freq, double v_shift){
     int N = std::ceil((double)_sampling_rate / freq);
     std::cout << "Generating sinusoid with " << N << " samples." << std::endl;
 

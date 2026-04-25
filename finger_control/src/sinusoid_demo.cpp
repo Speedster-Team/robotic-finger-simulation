@@ -71,7 +71,7 @@ const std::vector<double> four_bar_lengths = {
 int main() {
     auto transforms = Transformer{Ra, St, slist, four_bar_lengths};
     auto generator = Sinusoid{transforms, 100};    
-    auto q_motor_list = generator.generate_sinusoid(0, 0.4, 1, 0.8);
+    auto q_motor_list = generator.generate_sinusoid(1, 0.2, 1.0, 0.8);
 
     serial::Serial my_serial(port, baud, serial::Timeout::simpleTimeout(1000));
     if (my_serial.isOpen()) {
