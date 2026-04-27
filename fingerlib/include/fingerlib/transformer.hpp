@@ -17,12 +17,16 @@ public:
 /// \param screw_axes - The screw axes for the finger joints (in space frame)
 /// \param _M - The home configuration of the fingertip
 /// \param four_bar_lengths - The lengths of the four bars in the finger's four-bar linkage
+/// \param joint_min - The minimum angle for each joint
+/// \param joint_max - The maximum angle for each joint
 Transformer(
     const arma::mat& Ra, 
     const arma::mat& structure, 
     const std::vector<arma::vec6>& screw_axes, 
     const arma::mat44& M, 
-    const std::vector<double>& four_bar_lengths
+    const std::vector<double>& four_bar_lengths,
+    const arma::vec& joint_min,
+    const arma::vec& joint_max
 );
 
 /// \brief Convert joint angles to motor positions
@@ -50,6 +54,12 @@ arma::vec end_effector_to_joint(const arma::vec& q_end_effector);
 /// \return The Jacobian matrix in space frame
 arma::mat get_jacobian_space(const arma::vec& q_joint);
 
+/// \brief Calculate the 4-bar linkage ratios (dip angle and speed ratio) based on the pip angle
+/// \param pip_angle The angle of the pip joint (in radians)
+/// \param dip_angle Output parameter for the calculated dip angle (in radians)
+/// \param speed_ratio Output parameter for the calculated speed ratio (dimensionless)
+void calculate_4bar_ratios(double pip_angle, double& dip_angle, double& speed_ratio);
+
 private:
 
 // constant things 
@@ -70,11 +80,11 @@ const arma::mat44 _M;
 /// \brief  The lengths of the four bars in the finger's four-bar linkage (in meters)
 const std::vector<double> _4bar_lengths;
 
-/// \brief Calculate the 4-bar linkage ratios (dip angle and speed ratio) based on the pip angle
-/// \param pip_angle The angle of the pip joint (in radians)
-/// \param dip_angle Output parameter for the calculated dip angle (in radians)
-/// \param speed_ratio Output parameter for the calculated speed ratio (dimensionless)
-void calculate_4bar_ratios(double pip_angle, double& dip_angle, double& speed_ratio);
+/// \brief minimum joint angle for each joint
+const arma::vec _joint_min;
+/// \brief maximum joint angle for each joint
+const arma::vec _joint_max;
+
 
 };
 

@@ -6,7 +6,7 @@
 #include "serial/serial.h"
 
 #include "fingerlib/transformer.hpp"
-#include "fingerlib/sinusoid.hpp"
+#include "fingerlib/joint_trajectory.hpp"
 
 uint8_t crc8(const uint8_t* data, size_t length) {
     uint8_t crc = 0x00;  // initial value
@@ -67,6 +67,9 @@ const arma::mat44 M = {{1, 0, 0, 0.05},
                         {0, 0, 1, 0.1},
                         {0, 0, 0, 1}};
 
+const arma::vec joint_min = {-0.2, -0.2, 0};
+const arma::vec joint_max = {0.2, 1.57, 1.57};
+
 // 4 bar lengths
 const std::vector<double> four_bar_lengths = {
     8.83765 * 0.001,
@@ -75,8 +78,8 @@ const std::vector<double> four_bar_lengths = {
     37 * 0.001
 };
 int main() {
-    auto transforms = Transformer{Ra, St, slist, M, four_bar_lengths};
-    auto generator = Sinusoid{transforms, 100};    
+        auto transforms = Transformer{Ra, St, slist, M, four_bar_lengths, joint_min, joint_max};
+    auto generator = JointTrajectory{transforms, 100, -0.25};    
     auto q_motor_list = generator.generate_sinusoid(1, 0.2, 1.0, 0.8);
 
     serial::Serial my_serial(port, baud, serial::Timeout::simpleTimeout(1000));

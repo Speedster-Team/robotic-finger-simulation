@@ -35,18 +35,21 @@ TEST_CASE("Basic usage of Transformer class", "[Transformer]")
                           {0, r7, r5}, //mcp joint
                           {0, 0, r9}}; // pip/dip joint
 
-    // screw axes
+    // screw axes (x = joint, y = finger, z = up) (origin is on splay joint)
     const std::vector<arma::vec6> slist = {
-        arma::vec6({1,2,3,4,5,6}),
-        arma::vec6({6,5,4,3,2,1}),
-        arma::vec6({6,5,4,3,2,1}),
-        arma::vec6({6,5,4,3,2,1})
+        arma::vec6({0,0,1,0,0,0}),
+        arma::vec6({-1,0,0,0,0,0.01776}),
+        arma::vec6({-1,0,0,0,0,0.07776}),
+        arma::vec6({-1,0,0,0,0,0.11836})
     };
 
-    // fake rn
-    const arma::mat44 M = {{1, 0, 0, 0.05},
-                          {0, 1, 0, 0},
-                          {0, 0, 1, 0.1},
+    const arma::vec joint_min = {-0.2, -0.2, 0};
+    const arma::vec joint_max = {0.2, 1.572, 1.572};
+
+    // very simple from onshape
+    const arma::mat44 M = {{1, 0, 0, 0},
+                          {0, 1, 0, 0.16},
+                          {0, 0, 1, 0},
                           {0, 0, 0, 1}};
 
     // 4 bar lengths
@@ -59,7 +62,7 @@ TEST_CASE("Basic usage of Transformer class", "[Transformer]")
 
 
     // create transformer class
-    auto transforms = Transformer{Ra, St, slist, M, four_bar_lengths};
+    auto transforms = Transformer{Ra, St, slist, M, four_bar_lengths, joint_min, joint_max};
 
     SECTION("Joint to motor space")
     {
@@ -89,6 +92,69 @@ TEST_CASE("Basic usage of Transformer class", "[Transformer]")
         REQUIRE_THAT(q_motor(0), Catch::Matchers::WithinAbs(0, 1e-12));
         REQUIRE_THAT(q_motor(1), Catch::Matchers::WithinAbs(0, 1e-12));
         //REQUIRE_THAT(q_motor(2), Catch::Matchers::WithinAbs(1, 1e-12));
+    }
+
+    // ground truths from sympy
+    SECTION("4 Bar Linkage")
+    {
+        double pip_angle = 0.0;
+        double dip_angle, speed_ratio;
+        transforms.calculate_4bar_ratios(pip_angle, dip_angle, speed_ratio);
+
+        REQUIRE_THAT(dip_angle, Catch::Matchers::WithinAbs(0.00182, 1e-1));
+        REQUIRE_THAT(speed_ratio, Catch::Matchers::WithinAbs(0.922, 1e-1));
+
+        pip_angle = 0.785;
+        // double dip_angle, speed_ratio;
+        transforms.calculate_4bar_ratios(pip_angle, dip_angle, speed_ratio);
+
+        REQUIRE_THAT(dip_angle, Catch::Matchers::WithinAbs(0.785, 1e-1));
+        REQUIRE_THAT(speed_ratio, Catch::Matchers::WithinAbs(0.981, 1e-1));
+
+        pip_angle = 1.571;
+        // double dip_angle, speed_ratio;
+        transforms.calculate_4bar_ratios(pip_angle, dip_angle, speed_ratio);
+
+        REQUIRE_THAT(dip_angle, Catch::Matchers::WithinAbs(1.571, 1e-1));
+        REQUIRE_THAT(speed_ratio, Catch::Matchers::WithinAbs(1.205, 1e-1));
+
+    }
+
+    // from sympy, full test for this is if IK works
+    SECTION("Coupled Jacobian")
+    {
+        arma::vec q_joint = {0,0,0};
+
+        arma::mat J_truth = {
+            {0.0,      -1.0,      -1.92766584},
+            {0.0,      0,        0.0       },
+            {1.0,      0.0,      0.0       },
+            {0.0,      0.0,      0.0       },
+            {0.0,      0.0,      0.0       },
+            {0.0,      0.01776,  0.18755853}
+        };
+
+        auto J = transforms.get_jacobian_space(q_joint);
+
+
+        REQUIRE_THAT(arma::abs(J - J_truth).max(), Catch::Matchers::WithinAbs(0.0, 1e-1));
+    }
+
+    SECTION("FK")
+    {
+        arma::vec q_joint = {0.1,0.5,1.5};
+
+        auto q_ee = transforms.joint_to_end_effector(q_joint);
+
+        auto ee_pos = q_ee.submat(0,3,2,3);
+
+        std::cout << ee_pos << std::endl;
+
+        auto q_joint_ik = transforms.end_effector_to_joint(ee_pos);
+
+        std::cout << q_joint_ik << std::endl;
+
+
     }
 
 }
