@@ -73,6 +73,8 @@ class TendonFeedbackSystem(LeafSystem):
         # filter out splay, mcp, and pip
         poses = state[0:3]
 
+        # print(f'joint states: {poses}')
+
         # calculate tension extension due to force
         # stretch = tension * self.k  # do nothing with it for now
 
