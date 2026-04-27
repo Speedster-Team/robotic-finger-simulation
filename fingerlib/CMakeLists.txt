@@ -15,8 +15,8 @@ add_library(fingerlib
     src/pos_controller.cpp
     include/fingerlib/transformer.hpp
     src/transformer.cpp
-    include/fingerlib/sinusoid.hpp
-    src/sinusoid.cpp
+    include/fingerlib/joint_trajectory.hpp
+    src/joint_trajectory.cpp
 )
 
 # Use target_include_directories so that #include"fingerlib/header.hpp" works
@@ -38,7 +38,7 @@ target_link_libraries(fingerlib PRIVATE
 
 find_package(Catch2 3 REQUIRED)
 
-add_executable(tests tests/test_transformer.cpp)
+add_executable(tests tests/test_transformer.cpp tests/test_joint_traj.cpp)
 target_link_libraries(tests PRIVATE 
     Catch2::Catch2WithMain 
     fingerlib
