@@ -34,9 +34,9 @@ install(TARGETS sinusoid_demo
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(
-  DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}
-)
+# install(
+#   DIRECTORY launch
+#   DESTINATION share/${PROJECT_NAME}
+# )
 
 ament_package()

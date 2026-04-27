@@ -7,9 +7,37 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(serial REQUIRED)
+
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+
+# Create a library.
+add_library(serialinterface
+    include/serial_interface/serial_interface.hpp
+    src/serial_interface.cpp
+)
+
+# Use target_include_directories so that #include"fingerlib/header.hpp" works
+target_include_directories(serialinterface
+    PUBLIC
+    ${serial_INCLUDE_DIRS}
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+    $<INSTALL_INTERFACE:include/>
+)
+
+# specify additional compilation flags for the library
+target_compile_options(serialinterface PUBLIC -Wall -Wextra -pedantic)
+
+# Enable c++23 support.
+target_compile_features(serialinterface PUBLIC cxx_std_23)
+
+target_link_libraries(serialinterface PRIVATE
+    ${serial_LIBRARIES}
+)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
