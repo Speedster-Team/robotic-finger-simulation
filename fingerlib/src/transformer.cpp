@@ -1,10 +1,17 @@
 #include "fingerlib/transformer.hpp"
 #include "modern_robotics/velocity_kinematics_and_statics.hpp"
+#include "modern_robotics/forward_kinematics.hpp"
 
-Transformer::Transformer(const arma::mat& Ra, const arma::mat& structure, const std::vector<arma::vec6>& screw_axes, const std::vector<double>& four_bar_lengths)
+Transformer::Transformer(
+    const arma::mat& Ra, 
+    const arma::mat& structure, 
+    const std::vector<arma::vec6>& screw_axes, 
+    const arma::mat44& M,
+    const std::vector<double>& four_bar_lengths)
     : _Ra(Ra), _Ra_inv(arma::pinv(_Ra)), 
       _structure(structure), _structure_inv(arma::pinv(_structure)), 
-      _screw_axes(screw_axes), _4bar_lengths(four_bar_lengths)
+      _screw_axes(screw_axes), _M(M), 
+      _4bar_lengths(four_bar_lengths)
 {
 }
 
@@ -34,6 +41,61 @@ arma::mat Transformer::get_jacobian_space(const arma::vec& q_joint)
     return J;
 }
 
+// the plan:
+// Normally, IK uses a twist, but we will just use a position vector (x,y,z)
+// Basically e = x_d - f(q) will be 3x3 instead of 6x6.
+// This means that the Jacobian will also be 3x3 (using collapsed version), so it might be invertible?? will stick with pinv for now
+// Will still use FK from modern robotics but just drop orientation
+// might need to modify jacobian to make it coordinate not twist based..., should work fine using space frame though 
+arma::vec Transformer::end_effector_to_joint(const arma::vec& q_end_effector){
+  constexpr int max_iter = 20;
+  constexpr double ev = 1e-3; // position error tolerance
+
+  arma::vec thetalist(3, arma::fill::zeros); // initial guess for joint angles
+  int i = 0;
+  bool err = true;
+
+  do {
+    const arma::vec pos_error  = q_end_effector - joint_to_end_effector(thetalist).submat(0, 3, 2, 3); // position error (3x1 vector)
+    const arma::mat Js_sub = get_jacobian_space(thetalist).submat(3, 0, 5, 2); // rows 3-5 for linear velocity, columns 0-2 for the 3 joints
+
+    arma::vec dtheta;
+    if (arma::cond(Js_sub) > 1e6) {
+        // damped least squares
+        std::cout << "Warning: Jacobian is near singular, using damped least squares" << std::endl;
+        constexpr double lambda = 1e-2;
+        dtheta = Js_sub.t() * arma::solve(Js_sub * Js_sub.t() + lambda * lambda * arma::eye(3, 3), pos_error);
+    } else {
+        dtheta = arma::pinv(Js_sub) * pos_error;
+    }
+    
+    thetalist += dtheta;
+
+    err = arma::norm(pos_error) > ev;
+    ++i;
+  } while (err && i < max_iter);
+
+  // throw error if IK did not converge
+  if (err) {
+    throw std::runtime_error("IK did not converge");
+  }
+
+  return thetalist;
+}
+
+arma::mat44 Transformer::joint_to_end_effector(const arma::vec& q_joint){
+
+    double pip_angle = q_joint(2);
+    double dip_angle, speed_ratio;
+    calculate_4bar_ratios(pip_angle, dip_angle, speed_ratio);
+
+    arma::vec q_full = {q_joint(0), q_joint(1), q_joint(2), dip_angle};
+
+    // compute the full forward kinematics using modern robotics
+    arma::mat44 T = mr::FKinSpace(_M, _screw_axes, q_full);
+
+    return T;
+}
 
 // from claude
 void Transformer::calculate_4bar_ratios(
