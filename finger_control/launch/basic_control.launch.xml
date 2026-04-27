@@ -1,7 +1,0 @@
-<launch>
-
-    <node pkg="micro_ros_agent" exec="micro_ros_agent" name="micro_ros_agent" args="serial --dev /dev/ttyACM0" output="screen"/>
-
-    <node pkg="finger_control" exec="serial_test" output="screen"/>                         
-
-</launch>

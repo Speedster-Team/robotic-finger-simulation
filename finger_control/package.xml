@@ -13,7 +13,6 @@
   <test_depend>ament_lint_common</test_depend>
   
   <depend>std_msgs</depend>
-  <depend>micro_ros_agent</depend>
   <depend>fingerlib</depend>
   <depend>serial</depend>
   <export>
