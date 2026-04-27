@@ -1,0 +1,13 @@
+repositories:
+  modern-robotics-cpp:
+    type: git
+    url: https://github.com/nu-jliu/modern-robotics-cpp
+    version: main
+  robotic-finger-simulation:
+    type: git
+    url:  https://github.com/Speedster-Team/robotic-finger-simulation.git
+    version: main
+  serial:
+    type: git
+    url: https://github.com/RoverRobotics-forks/serial-ros2.git
+    version: master

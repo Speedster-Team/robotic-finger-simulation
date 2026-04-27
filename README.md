@@ -8,6 +8,11 @@ This project allows for the simulation of a robotic finger using Drake.
 ## Video
 https://github.com/user-attachments/assets/51fc3995-e88c-482a-a0bd-d43471b91480
 
+## Using this repository
+1. Download the `requirements.repos` file and place it in the src of your workspace. Install all required repositories using this command:
+
+        vcs import < requirements.repos
+
 ## Drake ROS Installation
 Drake must be installed on system as well as on drake_ros built locally in a overlay workspace.
 
