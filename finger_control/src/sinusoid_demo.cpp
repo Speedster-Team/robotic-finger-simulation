@@ -61,6 +61,12 @@ const std::vector<arma::vec6> slist = {
     arma::vec6({6,5,4,3,2,1})
 };
 
+// fake M rn
+const arma::mat44 M = {{1, 0, 0, 0.05},
+                        {0, 1, 0, 0},
+                        {0, 0, 1, 0.1},
+                        {0, 0, 0, 1}};
+
 // 4 bar lengths
 const std::vector<double> four_bar_lengths = {
     8.83765 * 0.001,
@@ -69,7 +75,7 @@ const std::vector<double> four_bar_lengths = {
     37 * 0.001
 };
 int main() {
-    auto transforms = Transformer{Ra, St, slist, four_bar_lengths};
+    auto transforms = Transformer{Ra, St, slist, M, four_bar_lengths};
     auto generator = Sinusoid{transforms, 100};    
     auto q_motor_list = generator.generate_sinusoid(1, 0.2, 1.0, 0.8);
 
