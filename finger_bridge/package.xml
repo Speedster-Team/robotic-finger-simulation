@@ -3,7 +3,7 @@
 <package format="3">
   <name>finger_bridge</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Bridges connection between commands and simulation or actual finger.</description>
   <maintainer email="michael.jenz77@gmail.com">Mjenz</maintainer>
   <license>MIT</license>
 
