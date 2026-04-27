@@ -261,11 +261,8 @@ def main():
     rclpy.init(args=None)
     node = rclpy.create_node('drakesim')
 
-    # define capstan gear ratio
-    gear_ratio = 3.5
-
     # add external systems
-    ros2drake_system = fingersim.builder.AddSystem(Ros2Drake(node, gear_ratio))
+    ros2drake_system = fingersim.builder.AddSystem(Ros2Drake(node))
 
     motor_torque_to_force_system = fingersim.builder.AddSystem(
         MotorTorqueToForceSystem())
@@ -274,7 +271,7 @@ def main():
         FingerPulleySystem())
 
     tendon_feedback_system = fingersim.builder.AddSystem(
-        TendonFeedbackSystem(gear_ratio))
+        TendonFeedbackSystem())
 
     motor_feedback_system = fingersim.builder.AddSystem(
         MotorFeedbackSystem())
@@ -287,11 +284,6 @@ def main():
     fingersim.builder.Connect(
         motor_torque_to_force_system.GetOutputPort('tendon_tension'),
         motor_tension_to_joint_torque_system.GetInputPort('tendon_tension'),
-    )
-    fingersim.builder.Connect(
-        ros2drake_system.GetOutputPort('motor_splay_torque'),
-        motor_tension_to_joint_torque_system.GetInputPort(
-            'motor_splay_torque'),
     )
     fingersim.builder.Connect(
         motor_tension_to_joint_torque_system.GetOutputPort('joint_torque'),
@@ -310,16 +302,8 @@ def main():
         motor_feedback_system.GetInputPort('tendon_velocity'),
     )
     fingersim.builder.Connect(
-        tendon_feedback_system.GetOutputPort('splay_velocity'),
-        motor_feedback_system.GetInputPort('splay_velocity'),
-    )
-    fingersim.builder.Connect(
         tendon_feedback_system.GetOutputPort('tendon_position'),
         motor_feedback_system.GetInputPort('tendon_position'),
-    )
-    fingersim.builder.Connect(
-        tendon_feedback_system.GetOutputPort('splay_position'),
-        motor_feedback_system.GetInputPort('splay_position'),
     )
     fingersim.builder.Connect(
         motor_feedback_system.GetOutputPort('motor_velocity'),

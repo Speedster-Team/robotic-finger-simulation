@@ -12,16 +12,13 @@ from std_msgs.msg import Float64MultiArray
 class Ros2Drake(LeafSystem):
     """Leaf system connecting ros inputs to drake."""
 
-    def __init__(self, node, gear_ratio):
+    def __init__(self, node):
         """Create instance of MotorSystem."""
         super().__init__()
         self.nu = 3
 
         # save node
         self._node = node
-
-        # define splay gear ratio
-        self.gr = gear_ratio
 
         # Internal state: holds the last received torque command
         # This is the ZOH behavior — persists until next message
@@ -31,11 +28,7 @@ class Ros2Drake(LeafSystem):
 
         # Output port for flex motors (all but last)
         self.DeclareVectorOutputPort(
-            'motor_torque', self.nu, self._calc_flex_torque
-        )
-        # Output port for splay motor (last element)
-        self.DeclareVectorOutputPort(
-            'motor_splay_torque', 1, self._calc_splay_torque
+            'motor_torque', self.nu, self._calc_torque
         )
 
         # Set subscriber
@@ -47,15 +40,10 @@ class Ros2Drake(LeafSystem):
             10,
         )
 
-    def _calc_flex_torque(self, context, output):
+    def _calc_torque(self, context, output):
         """Filter input torques for only flexion motor torques."""
         state = context.get_discrete_state(self.state_index).get_value()
         output.SetFromVector(state)
-
-    def _calc_splay_torque(self, context, output):
-        """Filter input torques for only splay motor torques."""
-        state = context.get_discrete_state(self.state_index).get_value()
-        output.SetFromVector(state[:1] / self.gr)
 
     def _ros_callback(self, msg):
         """Save new torque topic messages."""

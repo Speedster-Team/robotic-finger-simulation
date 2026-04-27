@@ -8,35 +8,25 @@ from pydrake.systems.framework import LeafSystem
 class TendonFeedbackSystem(LeafSystem):
     """Leaf system computing tendon velocities."""
 
-    def __init__(self, gear_ratio):
+    def __init__(self):
         """Create instance of TendonFeedbackSystem."""
         super().__init__()
 
         # define structure matrix
-        # Pulley Radii [m]
-        # Joint 0
+        ra = 0.0025  # splay motor shaft radius
+
+        r11 = ra * 3.5
         r1 = 8 * 0.001
-        r2 = 8 * 0.001
         r3 = 4.5 * 0.001
-        r4 = 4.5 * 0.001
-
-        # Joint 1
         r5 = 8 * 0.001
-        r6 = 8 * 0.001
         r7 = 4.5 * 0.001
-        r8 = 4.5 * 0.001
-
-        # Joint 2
         r9 = 9 * 0.001
-        r10 = 9 * 0.001
 
-        # Tendon Jacobian
-        Jt = np.array([[r3, r7, 0],  # mcp extension
-                       [r4, -r8, 0],  # mcp flex
-                       [-r1, r5, r9],  # pip extension
-                       [r2, -r6, -r10]])  # pip extension
+        self.St = np.array([[r11, -r3, -r1],  # splay joint
+                           [0,    r7,  r5],  # mcp joint
+                           [0,     0,  r9]])  # pip/dip joint
 
-        self.Jt_inv = np.linalg.pinv(Jt)
+        self.St_inv = np.linalg.inv(self.St)
 
         # Tendon stiffness vector
         self.k = np.array([2500.0, 2500.0, 2500.0, 2500.0])
@@ -44,25 +34,18 @@ class TendonFeedbackSystem(LeafSystem):
         # init size of input and output
         nq = 5  # five link positions
         nv = 5  # five link velocities
-        nt = 4  # four tendon velocities
-        nm = 1  # one motor velocity
-
-        # init gear ratio
-        self.gr = gear_ratio
+        nu = 3  # three tendon velocities
 
         # declare input and output ports with functions
         self.joint_state_input_port = self.DeclareVectorInputPort(
             'finger_state', nq + nv)
         self.tendon_tension_input_port = self.DeclareVectorInputPort(
-            'tendon_tension', nt)
+            'tendon_tension', nu)
         self.DeclareVectorOutputPort(
-            'tendon_velocity', nt, self._tendon_vel)
+            'tendon_velocity', nu, self._tendon_vel)
         self.DeclareVectorOutputPort(
-            'splay_velocity', nm, self._splay_vel)
-        self.DeclareVectorOutputPort(
-            'tendon_position', nt, self._tendon_pos)
-        self.DeclareVectorOutputPort(
-            'splay_position', nm, self._splay_pos)
+            'tendon_position', nu, self._tendon_pos)
+
 
         # structure of finger state
         # state x (size 10) = [q_splay, q_mcp_flex, q_pip1, q_dip1, q_pip2,
@@ -80,14 +63,7 @@ class TendonFeedbackSystem(LeafSystem):
         # stretch = tension * self.k  # do nothing with it for nowcb
 
         # transform to tendon space
-        output.SetFromVector(self.Jt_inv.T @ vels)
-
-    def _splay_vel(self, context, output):
-        """Scale splay velocity by gearbox and output."""
-        state = self.joint_state_input_port.Eval(context)
-
-        # output play velocity
-        output.SetFromVector(np.array([state[5] * self.gr]))
+        output.SetFromVector(self.St.T @ vels)
 
     def _tendon_pos(self, context, output):
         """Convert joint state to tendon position."""
@@ -101,11 +77,4 @@ class TendonFeedbackSystem(LeafSystem):
         # stretch = tension * self.k  # do nothing with it for now
 
         # transform to tendon space
-        output.SetFromVector(self.Jt_inv.T @ poses)
-
-    def _splay_pos(self, context, output):
-        """Scale splay position by gearbox and output."""
-        state = self.joint_state_input_port.Eval(context)
-
-        # output play velocity
-        output.SetFromVector(np.array([state[0] * self.gr]))
+        output.SetFromVector(self.St.T @ poses)

@@ -58,16 +58,6 @@ class Drake2Ros(LeafSystem):
             publish=self._publish_motor_position,
         )
 
-    def _calc_flex_torque(self, context, output):
-        """Filter input torques for only flexion motor torques."""
-        state = context.get_discrete_state(self.state_index).get_value()
-        output.SetFromVector(state)
-
-    def _calc_splay_torque(self, context, output):
-        """Filter input torques for only splay motor torques."""
-        state = context.get_discrete_state(self.state_index).get_value()
-        output.SetFromVector(state[:1] * self.gear_ratio)
-
     def _ros_callback(self, msg):
         """Save new torque topic messages."""
         data = list(msg.data)
