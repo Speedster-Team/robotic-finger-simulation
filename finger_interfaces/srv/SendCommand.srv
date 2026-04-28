@@ -1,0 +1,7 @@
+# message to communicate trajectories to be sent to the finger
+int64 length
+float32[] mcp_splay
+float32[] mcp_flex
+float32[] pip_flex
+---
+int8 success
