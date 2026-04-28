@@ -5,7 +5,8 @@ SerialInterface::SerialInterface()
 : _port ("/dev/ttyACM0"),
   _baud (115200),
   _msg_status (MessageStatus::NO_STATUS),
-  _serial (std::make_shared<serial::Serial>(_port, _baud, serial::Timeout::simpleTimeout(1000)))
+  _fdbk_status (FeedbackStatus::NOTHING_NEW),
+  _serial (std::make_shared<serial::Serial>(_port, _baud, serial::Timeout::simpleTimeout(1)))
 
 {
   // check if it was successfully opened
@@ -30,15 +31,18 @@ SerialInterface::SerialInterface()
   build_table();
 }
 
-void SerialInterface::send_command(std::vector<arma::vec> q_motor_list)
+void SerialInterface::send_command(std::vector<std::vector<float>> q_motor_list)
 {
+  // set message status
+  _msg_status = MessageStatus::NO_STATUS;
+
   // Build data lines first so we can CRC them the same way Teensy does
   std::vector<std::string> data_lines;
   for (auto & q_motor : q_motor_list) {
     data_lines.push_back(
-            std::to_string(q_motor(0)) + " " +
-            std::to_string(q_motor(1)) + " " +
-            std::to_string(q_motor(2))   // no \n yet — match Teensy's strlen behavior
+            std::to_string(q_motor.at(0)) + " " +
+            std::to_string(q_motor.at(1)) + " " +
+            std::to_string(q_motor.at(2))   // no \n yet — match Teensy's strlen behavior
     );
   }
 
@@ -66,29 +70,50 @@ void SerialInterface::send_command(std::vector<arma::vec> q_motor_list)
 
 void SerialInterface::parse_response()
 {
-  // get data
+  // check for 
+  // get data, wait for 1ms if no \n char
   std::string response = _serial->readline();
-  std::cout << "Teensy response: " << response << std::endl;
+
+  // check if a message was returned, if not return
+  if (response.empty()) 
+  {
+    return;
+  }
 
   // Parse and validate
   int resp_success;
-  float splay_pos, mcp_flex_pos, pip_flex_pos;
-  if (sscanf(response.c_str(), "%d", &resp_success) == 1)
+
+  if (sscanf(response.c_str(), "%f %f %f", &_mcp_splay_motor_pos, &_mcp_flex_motor_pos, &_pip_flex_motor_pos) == 3)
+  {
+    _fdbk_status = FeedbackStatus::NEW_FEEDBACK;
+
+  } else if (sscanf(response.c_str(), "%d", &resp_success) == 1)
   {
     // check for success in message reception
-    if (resp_success != 1){
-        
+    if (resp_success == 0){
+        _msg_status = MessageStatus::SUCCESS;
+    } else {
+        _msg_status = MessageStatus::FAILURE;
     }
-  } else if (sscanf(response.c_str(), "%f %f %f", &splay_pos, &mcp_flex_pos, &pip_flex_pos) == 3)
-  {// save data somehow
-
   } else {
     std::cerr << "Could not parse Teensy response." << std::endl;
   }
 }
 
-MessageStatus SerialInterface::get_message_status() const
+MessageStatus SerialInterface::get_message_status()
 {
     return _msg_status;
+}
+
+FeedbackStatus SerialInterface::get_feedback_status()
+{
+    return _fdbk_status;
+}
+
+std::vector<float> SerialInterface::get_feedback()
+{
+    _fdbk_status = FeedbackStatus::NOTHING_NEW;
+    return std::vector<float> {_mcp_splay_motor_pos, _mcp_flex_motor_pos, _pip_flex_motor_pos};
+
 }
 

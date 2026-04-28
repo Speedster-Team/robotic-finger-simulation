@@ -9,6 +9,8 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(serial REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(finger_interfaces REQUIRED)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -38,6 +40,14 @@ target_link_libraries(serialinterface PRIVATE
     ${serial_LIBRARIES}
 )
 
+add_executable(hardware_bridge src/hardware_bridge.cpp)
+
+target_link_libraries(hardware_bridge
+  rclcpp::rclcpp
+  serialinterface
+  ${finger_interfaces_TARGETS}
+  ${std_msgs_TARGETS}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -50,5 +60,9 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+install(TARGETS hardware_bridge
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()
