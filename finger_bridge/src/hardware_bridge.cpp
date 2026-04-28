@@ -25,7 +25,6 @@ public:
       [this](const std::shared_ptr<finger_interfaces::srv::SendCommand::Request> request,
       std::shared_ptr<finger_interfaces::srv::SendCommand::Response> response) -> void
       {
-        std::cout << "hehe" << std::endl;
 
         // reformat
         std::vector<std::vector<float>> commands(request->length, std::vector<float>(3));
@@ -35,8 +34,6 @@ public:
 
         // send serial command
         serial_interface_->send_command(commands);
-
-        std::cout << "hoho" << std::endl;
 
         // wait for result
         while (serial_interface_->get_message_status() == MessageStatus::NO_STATUS){
@@ -71,6 +68,7 @@ public:
         if (serial_interface_->get_feedback_status() == FeedbackStatus::NEW_FEEDBACK) {
           auto fb = serial_interface_->get_feedback();
           for (auto f : fb){
+            // for now, print feedback
             std::cout << float(f) << ' ';
           }
           std::cout << std::endl;
