@@ -7,9 +7,19 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(finger_interfaces REQUIRED)
+
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+
+add_executable(finger_planner src/finger_planner.cpp)
+
+target_link_libraries(finger_planner
+  rclcpp::rclcpp
+  ${finger_interfaces_TARGETS}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -22,5 +32,9 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+install(TARGETS finger_planner
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()
