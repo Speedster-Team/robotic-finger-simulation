@@ -33,12 +33,14 @@ This command is used to send a position trajectory for the teensy to send to mot
 
     <mcp_splay_position: float> <mcp_flex_position: float> <pip_flex_position: float>
             
-    <data_crc8: uint_8> end
+    <data_crc8: uint_8> 
+    end
 
 #### Stop command from laptop to teensy
 This command will stop the teensy safely.
 
     <command_type = S>
+    end
 
 #### General feedback from teensy to laptop
 The teensy is constantly sending these commands back to the laptop.

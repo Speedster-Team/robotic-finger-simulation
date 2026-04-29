@@ -10,6 +10,7 @@
 #include <armadillo>
 #include "serial/serial.h"
 
+/// \brief State variable monitoring the feedback status of a message sent. State is NO_STATUS until feedback recieved
 enum MessageStatus
 {
   NO_STATUS,
@@ -17,25 +18,39 @@ enum MessageStatus
   FAILURE,
 };
 
+/// \brief State variable showing state of position feedback from motors
 enum FeedbackStatus
 {
   NEW_FEEDBACK,
   NOTHING_NEW,
 };
 
+/// \brief Class abstraction of serial communication with teensy to send commands and recieve feedback
 class SerialInterface
 {
 public:
+  /// \brief Create instance of SerialInterface thus initializing and opening serial port
   SerialInterface();
 
+  /// \brief Parse feedback sent from teensy, either ack or position feedback
   void parse_response();
 
-  void send_command(std::vector<std::vector<float>> q_motor_list);
+  /// \brief Send a command containing trajectory to the teensy
+  /// \param q_motor_list - A nx3 matrix (vector of vectors) containing motor commands at 100hz
+  /// \param length - The length of the data message
+  /// \param repeat - A 1 or 0 indicating if trajectory should be repeated
+  void send_command(std::vector<std::vector<float>> q_motor_list, int length, int repeat);
 
+  /// \brief Send stop command to teensy
+  void send_stop();
+
+  /// \brief Access the message state machine state
   MessageStatus get_message_status();
 
+  /// \brief Access the feedback state machine state
   FeedbackStatus get_feedback_status();
 
+  /// \brief Get the position feedback sent by the teensy
   std::vector<float> get_feedback();
 
 private:
@@ -57,7 +72,6 @@ private:
   float _mcp_flex_motor_pos;
   /// \brief The PIP flex motor position
   float _pip_flex_motor_pos;
-
 
 
 };

@@ -7,7 +7,6 @@ SerialInterface::SerialInterface()
   _msg_status (MessageStatus::NO_STATUS),
   _fdbk_status (FeedbackStatus::NOTHING_NEW),
   _serial (std::make_shared<serial::Serial>(_port, _baud, serial::Timeout::simpleTimeout(1)))
-
 {
   // check if it was successfully opened
   if (_serial->isOpen()) {
@@ -31,7 +30,9 @@ SerialInterface::SerialInterface()
   build_table();
 }
 
-void SerialInterface::send_command(std::vector<std::vector<float>> q_motor_list)
+void SerialInterface::send_command(
+  std::vector<std::vector<float>> q_motor_list, int length,
+  int repeat)
 {
   // set message status
   _msg_status = MessageStatus::NO_STATUS;
@@ -55,7 +56,7 @@ void SerialInterface::send_command(std::vector<std::vector<float>> q_motor_list)
   }
 
   // Assemble payload
-  std::string payload = "s " + std::to_string(q_motor_list.size()) + " 1\n";
+  std::string payload = "D " + std::to_string(length) + " " + std::to_string(repeat) + "\n";
   for (auto & line : data_lines) {
     payload += line + "\n";
   }
@@ -68,32 +69,41 @@ void SerialInterface::send_command(std::vector<std::vector<float>> q_motor_list)
 
 }
 
+void SerialInterface::send_stop()
+{
+
+  // Assemble payload
+  std::string payload = "S\n";
+  payload += "end\n";     // "end" on its own line
+
+  std::cout << "Sending " << "stop." << std::endl;
+  _serial->write(payload);
+}
 void SerialInterface::parse_response()
 {
-  // check for 
+  // check for
   // get data, wait for 1ms if no \n char
   std::string response = _serial->readline();
 
   // check if a message was returned, if not return
-  if (response.empty()) 
-  {
+  if (response.empty()) {
     return;
   }
 
   // Parse and validate
   int resp_success;
 
-  if (sscanf(response.c_str(), "%f %f %f", &_mcp_splay_motor_pos, &_mcp_flex_motor_pos, &_pip_flex_motor_pos) == 3)
+  if (sscanf(response.c_str(), "%f %f %f", &_mcp_splay_motor_pos, &_mcp_flex_motor_pos,
+    &_pip_flex_motor_pos) == 3)
   {
     _fdbk_status = FeedbackStatus::NEW_FEEDBACK;
 
-  } else if (sscanf(response.c_str(), "%d", &resp_success) == 1)
-  {
+  } else if (sscanf(response.c_str(), "%d", &resp_success) == 1) {
     // check for success in message reception
-    if (resp_success == 0){
-        _msg_status = MessageStatus::SUCCESS;
+    if (resp_success == 0) {
+      _msg_status = MessageStatus::SUCCESS;
     } else {
-        _msg_status = MessageStatus::FAILURE;
+      _msg_status = MessageStatus::FAILURE;
     }
   } else {
     std::cerr << "Could not parse Teensy response." << std::endl;
@@ -102,18 +112,17 @@ void SerialInterface::parse_response()
 
 MessageStatus SerialInterface::get_message_status()
 {
-    return _msg_status;
+  return _msg_status;
 }
 
 FeedbackStatus SerialInterface::get_feedback_status()
 {
-    return _fdbk_status;
+  return _fdbk_status;
 }
 
 std::vector<float> SerialInterface::get_feedback()
 {
-    _fdbk_status = FeedbackStatus::NOTHING_NEW;
-    return std::vector<float> {_mcp_splay_motor_pos, _mcp_flex_motor_pos, _pip_flex_motor_pos};
+  _fdbk_status = FeedbackStatus::NOTHING_NEW;
+  return std::vector<float> {_mcp_splay_motor_pos, _mcp_flex_motor_pos, _pip_flex_motor_pos};
 
 }
-

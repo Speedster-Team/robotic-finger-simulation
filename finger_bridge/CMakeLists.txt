@@ -44,7 +44,14 @@ add_executable(hardware_bridge src/hardware_bridge.cpp)
 
 target_link_libraries(hardware_bridge
   rclcpp::rclcpp
+  ${finger_interfaces_TARGETS}
   serialinterface
+)
+
+add_executable(simulation_bridge src/simulation_bridge.cpp)
+
+target_link_libraries(simulation_bridge
+  rclcpp::rclcpp
   ${finger_interfaces_TARGETS}
   ${std_msgs_TARGETS}
 )
@@ -65,4 +72,7 @@ install(TARGETS hardware_bridge
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(TARGETS simulation_bridge
+  DESTINATION lib/${PROJECT_NAME}
+)
 ament_package()
