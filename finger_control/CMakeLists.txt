@@ -11,17 +11,6 @@ find_package(modern_robotics REQUIRED)
 find_package(fingerlib REQUIRED)
 find_package(serial REQUIRED)
 
-add_executable(sinusoid_demo src/sinusoid_demo.cpp)
-
-target_include_directories(sinusoid_demo PUBLIC
-  ${serial_INCLUDE_DIRS}
-)
-
-target_link_libraries(sinusoid_demo
-  rclcpp::rclcpp
-  fingerlib::fingerlib
-  ${serial_LIBRARIES}
-)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -29,10 +18,6 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
-
-install(TARGETS sinusoid_demo
-  DESTINATION lib/${PROJECT_NAME}
-)
 
 # install(
 #   DIRECTORY launch

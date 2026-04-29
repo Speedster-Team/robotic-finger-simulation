@@ -1,3 +1,12 @@
+/// \file
+/// \brief bridges feedback and commands between ros and teensy
+///
+/// PARAMETERS:
+/// PUBLISHES:
+/// SUBSCRIBES:
+/// SERVERS:
+///     send_service (finger_interfaces::srv::SendCommand): Gets command trajectories and saves to be output to drake.
+
 #include <chrono>
 #include <memory>
 #include <string>
@@ -6,8 +15,6 @@
 #include "serial_interface/serial_interface.hpp"
 
 #include "rclcpp/rclcpp.hpp"
-
-#include "std_msgs/msg/float32_multi_array.hpp"
 
 #include "finger_interfaces/srv/send_command.hpp"
 
@@ -29,24 +36,22 @@ public:
         // reformat
         std::vector<std::vector<float>> commands(request->length, std::vector<float>(3));
         for (int i = 0; i < request->length; i++) {
-            commands[i] = {request->mcp_splay[i], request->mcp_flex[i], request->pip_flex[i]};
+          commands[i] = {request->mcp_splay[i], request->mcp_flex[i], request->pip_flex[i]};
         }
 
         // send serial command
-        serial_interface_->send_command(commands);
+        serial_interface_->send_command(commands, request->length, request->repeat);
 
         // wait for result
-        while (serial_interface_->get_message_status() == MessageStatus::NO_STATUS){
+        while (serial_interface_->get_message_status() == MessageStatus::NO_STATUS) {
           //idle
           // std::cout << "idling" << std::endl;
         }
 
         // set return based on result
-        if (serial_interface_->get_message_status() == MessageStatus::SUCCESS)
-        {
+        if (serial_interface_->get_message_status() == MessageStatus::SUCCESS) {
           response->success = 1;
-        }
-        else {
+        } else {
           response->success = 0;
         }
 
@@ -58,7 +63,8 @@ public:
     send_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
     // create service
-    send_service_ = create_service<finger_interfaces::srv::SendCommand>("/send_service", send_service_callback, rclcpp::ServicesQoS(), send_cb_group_);
+    send_service_ = create_service<finger_interfaces::srv::SendCommand>("/send_service",
+      send_service_callback, rclcpp::ServicesQoS(), send_cb_group_);
 
     // define timer callback and init
     auto timer_callback =
@@ -67,7 +73,7 @@ public:
 
         if (serial_interface_->get_feedback_status() == FeedbackStatus::NEW_FEEDBACK) {
           auto fb = serial_interface_->get_feedback();
-          for (auto f : fb){
+          for (auto f : fb) {
             // for now, print feedback
             std::cout << float(f) << ' ';
           }
@@ -76,14 +82,12 @@ public:
       };
     timer_ = this->create_wall_timer(1ms, timer_callback);
 
-    
 
   }
 
 private:
   rclcpp::TimerBase::SharedPtr timer_;
   std::shared_ptr<SerialInterface> serial_interface_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr publisher_;
   rclcpp::Service<finger_interfaces::srv::SendCommand>::SharedPtr send_service_;
   rclcpp::CallbackGroup::SharedPtr send_cb_group_;
 };
