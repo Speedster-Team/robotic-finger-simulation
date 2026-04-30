@@ -53,7 +53,6 @@ public:
         std::cout << std::endl;
       };
 
-cdcd s
     motor_feedback_sub_ = create_subscription<std_msgs::msg::Float64MultiArray>("/motor_position",
       10, motor_pos_sub_callback);
 
