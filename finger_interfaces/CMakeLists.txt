@@ -12,6 +12,7 @@ find_package(rosidl_default_generators REQUIRED)
 set(srv_files
   "srv/SendCommand.srv"
   "srv/Waypoints.srv"
+  "action/Cartesian.action"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

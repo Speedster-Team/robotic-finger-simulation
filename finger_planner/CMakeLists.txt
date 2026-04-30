@@ -8,7 +8,10 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(finger_interfaces REQUIRED)
+find_package(fingerlib REQUIRED)
+find_package(modern_robotics REQUIRED)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -18,7 +21,9 @@ add_executable(finger_planner src/finger_planner.cpp)
 
 target_link_libraries(finger_planner
   rclcpp::rclcpp
+  rclcpp_action::rclcpp_action
   ${finger_interfaces_TARGETS}
+  fingerlib::fingerlib
 )
 
 if(BUILD_TESTING)
