@@ -41,6 +41,7 @@ public:
 
     // create publishers
     motor_cmd_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/torque_cmd", 10);
+    action_feedback_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/motor_pos_action_feedback", 10);
 
     // create subscriptions
     auto motor_pos_sub_callback =
@@ -52,7 +53,7 @@ public:
         std::cout << std::endl;
       };
 
-
+cdcd s
     motor_feedback_sub_ = create_subscription<std_msgs::msg::Float64MultiArray>("/motor_position",
       10, motor_pos_sub_callback);
 
@@ -81,7 +82,7 @@ public:
       };
 
     // create service
-    send_service_ = create_service<finger_interfaces::srv::SendCommand>("/send_service",
+    send_service_ = create_service<finger_interfaces::srv::SendCommand>("/send_command",
       send_service_callback);
 
     // define timer callback and init
@@ -119,6 +120,7 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
   DataState data_state_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr motor_cmd_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr action_feedback_pub_;
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr motor_feedback_sub_;
   rclcpp::Service<finger_interfaces::srv::SendCommand>::SharedPtr send_service_;
   rclcpp::CallbackGroup::SharedPtr send_cb_group_;

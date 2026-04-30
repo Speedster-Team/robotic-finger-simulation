@@ -10,4 +10,8 @@
 
   <node pkg="finger_bridge" exec="simulation_bridge"/>
 
+  <node pkg="finger_planner" exec="finger_planner"/>
+
+  <node pkg="finger_control" exec="finger_control"/>
+
 </launch>

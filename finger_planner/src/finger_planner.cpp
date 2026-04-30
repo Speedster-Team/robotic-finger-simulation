@@ -1,5 +1,5 @@
 /// \file
-/// \brief generates trajectories and sends them to be executed
+/// \brief coordinates motion planning for finger movement.
 ///
 /// PARAMETERS:
 /// PUBLISHES:
@@ -17,17 +17,18 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 
 #include "finger_interfaces/srv/send_command.hpp"
-#include "finger_interfaces/srv/waypoints.hpp"
 #include "finger_interfaces/action/cartesian.hpp"
 
 #include "fingerlib/joint_trajectory.hpp"
 
 using namespace std::chrono_literals;
 
+/// \brief State variable for the command sent to the finger
 enum CmdState {
   IDLE,
   SENT,
-  RECIEVED,
+  RECEIVED,
+  CANCELLED
 };
 
 class FingerPlanner : public rclcpp::Node
@@ -98,15 +99,29 @@ public:
 
     // create client
     send_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-    send_client_ = create_client<finger_interfaces::srv::SendCommand>("/send_service", 10, send_cb_group_);
+    send_client_ = create_client<finger_interfaces::srv::SendCommand>("/send_command", 10, send_cb_group_);
     
     auto cartesian_handle_goal = [this](
-      const rclcpp_action::GoalUUID & uuid,
+      const rclcpp_action::GoalUUID,
       std::shared_ptr<const finger_interfaces::action::Cartesian::Goal> goal)
     {
-      RCLCPP_INFO(get_logger(), "Received goal request with order %d", goal->length);
-      (void)uuid;
-      return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+      // check that requested waypoints are same length 
+      if ((goal->length == int(goal->x.size())) && (goal->length == int(goal->y.size())) && (goal->length == int(goal->z.size()))) {
+        // print request
+        RCLCPP_INFO(get_logger(), "Received goal request with length %d and waypoints:", goal->length);
+        for (auto i = 0; i < goal->length; i++) {
+          RCLCPP_INFO_STREAM(get_logger(), "(" << goal->x.at(i) << ", " << goal->y.at(i) << ", " <<  goal->z.at(i) << ")");
+        }
+
+        // accept request
+        return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+      } else {
+        // print error
+        RCLCPP_ERROR(get_logger(), "Goal request REJECTED because waypoints are malformed.");
+
+        // reject request
+        return rclcpp_action::GoalResponse::REJECT;
+      }
     };
 
     auto cartesian_handle_cancel = [this](
@@ -122,16 +137,23 @@ public:
     {
       // this needs to return quickly to avoid blocking the executor,
       // so we declare a lambda function to be called inside a new thread
-      auto execute_in_thread = [this, goal_handle](){return this->execute_cartesian_goal(goal_handle);};
-      std::thread{execute_in_thread}.detach();
+      // auto execute_in_thread = [this, goal_handle](){return this->execute_cartesian_goal(goal_handle);};
+
+      // std::thread{execute_in_thread}.detach();
+
+      timer_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+      action_timer_ = create_wall_timer(100ms, [this, goal_handle](){return this->execute_cartesian_goal(goal_handle);}, timer_cb_group_);
     };
 
+    cartesian_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     cartesian_action_server_ = rclcpp_action::create_server<finger_interfaces::action::Cartesian>(
       this,
       "/cartesian_move",
       cartesian_handle_goal,
       cartesian_handle_cancel,
-      cartesian_handle_accepted);
+      cartesian_handle_accepted,
+      rcl_action_server_get_default_options(),
+      cartesian_cb_group_);
   
   }
 
@@ -139,8 +161,10 @@ private:
   CmdState cmd_state_;
   rclcpp::Client<finger_interfaces::srv::SendCommand>::SharedPtr send_client_;
   rclcpp::CallbackGroup::SharedPtr send_cb_group_;
-  rclcpp::Service<finger_interfaces::srv::Waypoints>::SharedPtr cartesian_move_service_;
+  rclcpp::CallbackGroup::SharedPtr cartesian_cb_group_;
+  rclcpp::CallbackGroup::SharedPtr timer_cb_group_;
   rclcpp_action::Server<finger_interfaces::action::Cartesian>::SharedPtr cartesian_action_server_;
+  rclcpp::TimerBase::SharedPtr action_timer_;
   std::shared_ptr<Transformer> transforms_;
   std::shared_ptr<JointTrajectory> generator_;
   std::shared_ptr<finger_interfaces::action::Cartesian::Feedback> cartesian_feedback_;
@@ -149,7 +173,7 @@ private:
   void execute_cartesian_goal(const std::shared_ptr<GoalHandleCartesian> goal_handle) {
     if (cmd_state_ == CmdState::IDLE){
       RCLCPP_INFO(this->get_logger(), "Executing goal");
-      rclcpp::Rate loop_rate(10);
+      
       const auto goal = goal_handle->get_goal();
       cartesian_feedback_ = std::make_shared<finger_interfaces::action::Cartesian::Feedback>();
       cartesian_result_ = std::make_shared<finger_interfaces::action::Cartesian::Result>();
@@ -166,7 +190,7 @@ private:
       // send trajectories
       auto rq = finger_interfaces::srv::SendCommand::Request::SharedPtr();
       
-      for (auto q : q_motor_list) {
+      for (auto & q : q_motor_list) {
         rq->mcp_splay.push_back(q.at(0));
         rq->mcp_flex.push_back(q.at(1));
         rq->pip_flex.push_back(q.at(2));
@@ -176,12 +200,10 @@ private:
       auto send_client_callback =
       [this](rclcpp::Client<finger_interfaces::srv::SendCommand>::SharedFutureWithRequest future) {
         // update state
-        cmd_state_ = CmdState::RECIEVED;
+        cmd_state_ = CmdState::RECEIVED;
 
         // get result and assign to action result
-        cartesian_result_->success = future.get().second->success;
-        
-        // assign action result
+        cartesian_result_->success = future.get().second->success;        
       };
 
       // send request
@@ -190,18 +212,41 @@ private:
       // update state
       cmd_state_ = CmdState::SENT;
 
+      // create subscription for feedback
+
+
     } else if (cmd_state_ == CmdState::SENT) {
       // get feedback and wait for response
-      goal_handle->publish_feedback(cartesian_feedback_);
-    } else if (cmd_state_ == CmdState::RECIEVED) {
+      // goal_handle->publish_feedback(cartesian_feedback_);
+
+      // TODO: create feedback topics
+      
+    } else if (cmd_state_ == CmdState::RECEIVED) {
       // Check if goal is done
-      if (rclcpp::ok()) {
-        goal_handle->succeed(cartesian_result_);
-        RCLCPP_INFO(this->get_logger(), "Goal succeeded");
-      }
+      goal_handle->succeed(cartesian_result_);
+      RCLCPP_INFO(this->get_logger(), "Goal succeeded");
 
       // update cmd state for next time
       cmd_state_ = CmdState::IDLE;
+
+      // cancel action timer now that its done
+      action_timer_->cancel();
+
+    } else {
+      RCLCPP_DEBUG(this->get_logger(), "Cmd State is cancelled");
+    }
+
+    
+    if (goal_handle->is_canceling()) {
+      // request has been cancelled, return error
+      if (rclcpp::ok()) {
+        cartesian_result_->success = 55;
+        goal_handle->canceled(cartesian_result_);
+        RCLCPP_ERROR(this->get_logger(), "Goal failed");
+      }
+
+      // cancel action timer now that its done
+      action_timer_->cancel();
     }
     
 
@@ -214,7 +259,6 @@ private:
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  // rclcpp::spin(std::make_shared<FingerPlanner>());
   auto node = std::make_shared<FingerPlanner>();
   rclcpp::executors::MultiThreadedExecutor exec;
   exec.add_node(node);

@@ -14,8 +14,9 @@
 
   <depend>rclcpp</depend>
   <depend>serial</depend>
+  <depend>std_msgs</depend>
   <depend>finger_interfaces</depend>
-  
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>

@@ -63,7 +63,7 @@ public:
     send_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
     // create service
-    send_service_ = create_service<finger_interfaces::srv::SendCommand>("/send_service",
+    send_service_ = create_service<finger_interfaces::srv::SendCommand>("/send_command",
       send_service_callback, rclcpp::ServicesQoS(), send_cb_group_);
 
     // define timer callback and init

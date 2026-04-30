@@ -7,10 +7,16 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(modern_robotics REQUIRED)
-find_package(fingerlib REQUIRED)
-find_package(serial REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(finger_interfaces REQUIRED)
 
+add_executable(finger_control src/finger_control.cpp)
+
+target_link_libraries(finger_control
+  rclcpp::rclcpp
+  rclcpp_action::rclcpp_action
+  ${finger_interfaces_TARGETS}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -19,9 +25,13 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-# install(
-#   DIRECTORY launch
-#   DESTINATION share/${PROJECT_NAME}
-# )
+install(
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(TARGETS finger_control
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()

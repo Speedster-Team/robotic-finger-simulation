@@ -1,0 +1,123 @@
+/// \file
+/// \brief runs high level control coordinating perception and movement commands
+///
+/// PARAMETERS:
+/// PUBLISHES:
+/// SUBSCRIBES:
+/// SERVERS:
+
+#include <chrono>
+#include <memory>
+#include <string>
+#include <cmath>
+#include <vector>
+
+#include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
+
+#include "finger_interfaces/action/cartesian.hpp"
+
+using namespace std::chrono_literals;
+
+/// \brief A class that bridges commands and feedback between ros and drake
+class FingerControl : public rclcpp::Node
+{
+public:
+  using GoalHandleCartesian = rclcpp_action::ClientGoalHandle<finger_interfaces::action::Cartesian>;
+  using Cartesian = finger_interfaces::action::Cartesian;
+
+  /// \brief Create an instance of SimulationBridge
+  FingerControl()
+  : Node("finger_control")
+  {
+    // create cartesian action client
+    cartesian_client_ = rclcpp_action::create_client<Cartesian>(this,
+      "/cartesian_move");
+
+    // wait for server to appear
+    while (!cartesian_client_->wait_for_action_server(1s)) {
+      if (!rclcpp::ok()) {
+        RCLCPP_ERROR(get_logger(), "client interrupted while waiting for service to appear.");
+        rclcpp::shutdown();
+      }
+      RCLCPP_INFO(get_logger(), "waiting for service to appear...");
+    }
+
+    // send test command
+    std::vector<float> start = {0, 0.15, -0.05};
+    std::vector<float> end   = {0, 0.08, -0.1};  
+    std::vector<std::vector<float>> waypoints = {start, end};
+    send_cartesian_goal(waypoints);
+  }
+
+private:
+  rclcpp_action::Client<Cartesian>::SharedPtr cartesian_client_;
+
+  void send_cartesian_goal(std::vector<std::vector<float>> waypoints)
+  {
+    // using namespace std::placeholders;
+
+    auto goal_msg = finger_interfaces::action::Cartesian::Goal();
+
+    // create goal request
+    goal_msg.length = int(waypoints.size());
+    for (auto & wp : waypoints) {
+        goal_msg.x.push_back(wp.at(0));
+        goal_msg.y.push_back(wp.at(1));
+        goal_msg.z.push_back(wp.at(2));
+    }
+
+    RCLCPP_INFO(this->get_logger(), "Sending goal");
+
+    auto send_goal_options = rclcpp_action::Client<Cartesian>::SendGoalOptions();
+    send_goal_options.goal_response_callback =
+      [this](const GoalHandleCartesian::SharedPtr & goal_handle)
+      {
+        if (!goal_handle) {
+          RCLCPP_ERROR(this->get_logger(), "Goal was rejected by server");
+        } else {
+          RCLCPP_INFO(this->get_logger(), "Goal accepted by server, waiting for result");
+        }
+      };
+
+    send_goal_options.feedback_callback = [this](
+      GoalHandleCartesian::SharedPtr,
+      const std::shared_ptr<const Cartesian::Feedback>)
+      {
+        RCLCPP_INFO(get_logger(), "feedback recieved...");
+      };
+
+    send_goal_options.result_callback = [this](const GoalHandleCartesian::WrappedResult & result)
+      {
+        switch (result.code) {
+          case rclcpp_action::ResultCode::SUCCEEDED:
+            break;
+          case rclcpp_action::ResultCode::ABORTED:
+            RCLCPP_ERROR_STREAM(this->get_logger(), "Goal was aborted");
+            return;
+          case rclcpp_action::ResultCode::CANCELED:
+            RCLCPP_ERROR_STREAM(this->get_logger(), "Goal was canceled");
+            return;
+          default:
+            RCLCPP_ERROR_STREAM(this->get_logger(), "Unknown result code");
+            return;
+        }
+
+        RCLCPP_INFO_STREAM(this->get_logger(), "result code: " << result.result.get()->success);
+      };
+
+    this->cartesian_client_->async_send_goal(goal_msg, send_goal_options);
+  }
+};
+
+int main(int argc, char * argv[])
+{
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<FingerControl>());
+//   auto node = std::make_shared<HardwareBridge>();
+//   rclcpp::executors::MultiThreadedExecutor exec;
+//   exec.add_node(node);
+//   exec.spin();
+  rclcpp::shutdown();
+  return 0;
+}

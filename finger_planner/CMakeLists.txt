@@ -12,6 +12,7 @@ find_package(rclcpp_action REQUIRED)
 find_package(finger_interfaces REQUIRED)
 find_package(fingerlib REQUIRED)
 find_package(modern_robotics REQUIRED)
+find_package(Armadillo REQUIRED)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -24,6 +25,7 @@ target_link_libraries(finger_planner
   rclcpp_action::rclcpp_action
   ${finger_interfaces_TARGETS}
   fingerlib::fingerlib
+  ${ARMADILLO_LIBRARIES}
 )
 
 if(BUILD_TESTING)

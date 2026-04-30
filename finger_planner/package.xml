@@ -16,6 +16,7 @@
   <depend>armadillo</depend>
   <depend>fingerlib</depend>
   <depend>rclcpp_action</depend>
+  <depend>modern_robotics</depend>
   
   <export>
     <build_type>ament_cmake</build_type>

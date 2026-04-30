@@ -3,7 +3,7 @@
 <package format="3">
   <name>finger_control</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Runs high level control coordinating perception and movement commands</description>
   <maintainer email="michael.jenz77@gmail.com">Mjenz</maintainer>
   <license>MIT</license>
 
@@ -12,9 +12,8 @@
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
   
-  <depend>std_msgs</depend>
-  <depend>fingerlib</depend>
-  <depend>serial</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
   <depend>finger_interfaces</depend>
   
   <export>
