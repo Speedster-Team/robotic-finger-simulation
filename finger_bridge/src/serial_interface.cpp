@@ -69,6 +69,17 @@ void SerialInterface::send_command(
 
 }
 
+void SerialInterface::send_start()
+{
+
+  // Assemble payload
+  std::string payload = "G\n";
+  payload += "end\n";     // "end" on its own line
+
+  std::cout << "Sending " << "Go." << std::endl;
+  _serial->write(payload);
+}
+
 void SerialInterface::send_stop()
 {
 
@@ -79,6 +90,7 @@ void SerialInterface::send_stop()
   std::cout << "Sending " << "stop." << std::endl;
   _serial->write(payload);
 }
+
 void SerialInterface::parse_response()
 {
   // check for
@@ -93,8 +105,8 @@ void SerialInterface::parse_response()
   // Parse and validate
   int resp_success;
 
-  if (sscanf(response.c_str(), "%f %f %f", &_mcp_splay_motor_pos, &_mcp_flex_motor_pos,
-    &_pip_flex_motor_pos) == 3)
+  if (sscanf(response.c_str(), "%f %f %f %d", &_mcp_splay_motor_pos, &_mcp_flex_motor_pos,
+    &_pip_flex_motor_pos, &_active) == 4)
   {
     _fdbk_status = FeedbackStatus::NEW_FEEDBACK;
 
@@ -123,6 +135,6 @@ FeedbackStatus SerialInterface::get_feedback_status()
 std::vector<float> SerialInterface::get_feedback()
 {
   _fdbk_status = FeedbackStatus::NOTHING_NEW;
-  return std::vector<float> {_mcp_splay_motor_pos, _mcp_flex_motor_pos, _pip_flex_motor_pos};
+  return std::vector<float> {_mcp_splay_motor_pos, _mcp_flex_motor_pos, _pip_flex_motor_pos, _active};
 
 }

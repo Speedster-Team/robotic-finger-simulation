@@ -46,6 +46,7 @@ target_link_libraries(hardware_bridge
   rclcpp::rclcpp
   ${finger_interfaces_TARGETS}
   serialinterface
+  ${std_msgs_TARGETS}
 )
 
 add_executable(simulation_bridge src/simulation_bridge.cpp)

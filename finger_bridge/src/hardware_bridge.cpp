@@ -17,30 +17,79 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include "finger_interfaces/srv/send_command.hpp"
+#include "finger_interfaces/srv/start_stop_command.hpp"
+#include "finger_interfaces/msg/motor_feedback.hpp"
+
+#include "std_msgs/msg/float64_multi_array.hpp"
 
 using namespace std::chrono_literals;
+
+/// \brief State variable showing if data is ready to be sent
+enum State
+{
+  READY,
+  WAITING,
+};
 
 class HardwareBridge : public rclcpp::Node
 {
 public:
   HardwareBridge()
   : Node("hardware_bridge"),
-    serial_interface_ (std::make_shared<SerialInterface>())
+    serial_interface_ (std::make_shared<SerialInterface>()),
+    state_ (State::WAITING)
   {
-    // define service callback function
+    // init motor feedback 
+    motor_feedback_.motor_positions = {0, 0, 0};
+    motor_feedback_.active = 0.0;
+
+    // define send service callback function
     auto send_service_callback =
       [this](const std::shared_ptr<finger_interfaces::srv::SendCommand::Request> request,
       std::shared_ptr<finger_interfaces::srv::SendCommand::Response> response) -> void
       {
 
         // reformat
-        std::vector<std::vector<float>> commands(request->length, std::vector<float>(3));
+        std::vector<std::vector<float>> commands_(request->length, std::vector<float>(3));
         for (int i = 0; i < request->length; i++) {
-          commands[i] = {request->mcp_splay[i], request->mcp_flex[i], request->pip_flex[i]};
+          commands_[i] = {request->mcp_splay[i], request->mcp_flex[i], request->pip_flex[i]};
         }
 
+        // save length and repeat
+        length_ = request->length;
+        repeat_ = request->repeat;
+
         // send serial command
-        serial_interface_->send_command(commands, request->length, request->repeat);
+        serial_interface_->send_command(commands_, request->length, request->repeat);
+
+        // wait for result
+        while (serial_interface_->get_message_status() == MessageStatus::NO_STATUS) {
+          //idle
+          // std::cout << "idling" << std::endl;
+        }
+
+        // set return based on result
+        if (serial_interface_->get_message_status() == MessageStatus::SUCCESS) {
+          response->success = 1;
+        } else {
+          response->success = 0;
+        }
+      };
+
+    // create callback group for send service
+    send_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
+    // create send service
+    send_service_ = create_service<finger_interfaces::srv::SendCommand>("/send_command",
+      send_service_callback, rclcpp::ServicesQoS(), send_cb_group_);
+
+    // define start service callback function
+    auto start_service_callback =
+      [this](const std::shared_ptr<finger_interfaces::srv::StartStopCommand::Request>,
+      std::shared_ptr<finger_interfaces::srv::StartStopCommand::Response> response) -> void
+      {
+        // send serial command
+        serial_interface_->send_start();
 
         // wait for result
         while (serial_interface_->get_message_status() == MessageStatus::NO_STATUS) {
@@ -55,42 +104,121 @@ public:
           response->success = 0;
         }
 
-
+        // make state ready
+        state_ = State::READY;
       };
 
-    // TODO: Check if this formulation is correct!!!! feels like cheating to use multithreaded executor
-    // create callback group for service
-    send_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    // create callback group for start service
+    start_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-    // create service
-    send_service_ = create_service<finger_interfaces::srv::SendCommand>("/send_command",
-      send_service_callback, rclcpp::ServicesQoS(), send_cb_group_);
+    // create start service
+    start_service_ = create_service<finger_interfaces::srv::StartStopCommand>("/start_command",
+      start_service_callback, rclcpp::ServicesQoS(), start_cb_group_);
 
-    // define timer callback and init
-    auto timer_callback =
+    // define stop service callback function
+    auto stop_service_callback =
+      [this](const std::shared_ptr<finger_interfaces::srv::StartStopCommand::Request>,
+      std::shared_ptr<finger_interfaces::srv::StartStopCommand::Response> response) -> void
+      {
+        // send serial command
+        serial_interface_->send_stop();
+
+        // wait for result
+        while (serial_interface_->get_message_status() == MessageStatus::NO_STATUS) {
+          //idle
+          // std::cout << "idling" << std::endl;
+        }
+
+        // set return based on result
+        if (serial_interface_->get_message_status() == MessageStatus::SUCCESS) {
+          response->success = 1;
+        } else {
+          response->success = 0;
+        }
+
+        // make state waiting
+        state_ = State::WAITING;
+      };
+
+    // create callback group for stop service
+    stop_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
+    // create stop service
+    stop_service_ = create_service<finger_interfaces::srv::StartStopCommand>("/stop_command",
+      stop_service_callback, rclcpp::ServicesQoS(), stop_cb_group_);
+
+    // create publishers
+    motor_cmd_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/torque_cmd", 10);
+    action_feedback_pub_ = create_publisher<finger_interfaces::msg::MotorFeedback>("/motor_pos_feedback", 10);
+
+    // define feedback timer callback and init
+    auto feedback_timer_callback =
       [this]() -> void {
         serial_interface_->parse_response();
 
         if (serial_interface_->get_feedback_status() == FeedbackStatus::NEW_FEEDBACK) {
           auto fb = serial_interface_->get_feedback();
-          for (auto f : fb) {
-            // for now, print feedback
-            std::cout << float(f) << ' ';
-          }
-          std::cout << std::endl;
+          // for (auto f : fb) {
+          //   // for now, print feedback
+          //   // std::cout << float(f) << ' ';
+          // }
+          // std::cout << std::endl;
+
+          motor_feedback_.motor_positions = std::vector<float>(fb.begin(), fb.begin() + 2);
+          motor_feedback_.active = fb.back();
+          action_feedback_pub_->publish(motor_feedback_);
         }
       };
-    timer_ = this->create_wall_timer(1ms, timer_callback);
+    feedback_timer_ = this->create_wall_timer(1ms, feedback_timer_callback);
 
+    // define timer callback and init
+    auto command_sender_timer_callback =
+      [this]() -> void {
+        // init count
+        static auto count = 0;
 
+        if (state_ == State::READY) {
+          // publish commands to drake
+          auto msg = std_msgs::msg::Float64MultiArray();
+          msg.data = {commands_.at(count).at(0), commands_.at(count).at(1),
+            commands_.at(count).at(2)};
+          motor_cmd_pub_->publish(msg);
+
+          // increment counter
+          count++;
+
+          // check for overflow
+          if (count >= length_) {
+            count = 0;
+            if (repeat_ == 0) {
+              // disable control if no repeat
+              state_ = State::WAITING;
+            }
+          }
+        }
+      };
+    teensy_sim_timer_ = this->create_wall_timer(10ms, command_sender_timer_callback);
   }
 
 private:
-  rclcpp::TimerBase::SharedPtr timer_;
   std::shared_ptr<SerialInterface> serial_interface_;
+  State state_;
+  finger_interfaces::msg::MotorFeedback motor_feedback_;
+  rclcpp::TimerBase::SharedPtr feedback_timer_;
+  rclcpp::TimerBase::SharedPtr teensy_sim_timer_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr motor_cmd_pub_;
+  rclcpp::Publisher<finger_interfaces::msg::MotorFeedback>::SharedPtr action_feedback_pub_;
   rclcpp::Service<finger_interfaces::srv::SendCommand>::SharedPtr send_service_;
+  rclcpp::Service<finger_interfaces::srv::StartStopCommand>::SharedPtr start_service_;
+  rclcpp::Service<finger_interfaces::srv::StartStopCommand>::SharedPtr stop_service_;
   rclcpp::CallbackGroup::SharedPtr send_cb_group_;
+  rclcpp::CallbackGroup::SharedPtr start_cb_group_;
+  rclcpp::CallbackGroup::SharedPtr stop_cb_group_;
+  std::vector<std::vector<float>> commands_;
+  int length_;
+  int repeat_;
 };
+
 
 int main(int argc, char * argv[])
 {

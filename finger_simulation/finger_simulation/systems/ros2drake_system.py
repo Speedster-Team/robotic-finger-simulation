@@ -8,7 +8,6 @@ import rclpy
 
 from std_msgs.msg import Float64MultiArray
 
-
 class Ros2Drake(LeafSystem):
     """Leaf system connecting ros inputs to drake."""
 

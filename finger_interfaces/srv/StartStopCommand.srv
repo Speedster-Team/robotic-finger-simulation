@@ -1,0 +1,3 @@
+# message to communicate trajectories to be sent to the finger
+---
+int8 success

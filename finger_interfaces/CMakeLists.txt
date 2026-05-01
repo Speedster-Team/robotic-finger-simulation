@@ -9,12 +9,22 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
-set(srv_files
-  "srv/SendCommand.srv"
+set (action_files
   "action/Cartesian.action"
 )
 
+set (msg_files
+  "msg/MotorFeedback.msg"
+)
+
+set(srv_files
+  "srv/SendCommand.srv"
+  "srv/StartStopCommand.srv"
+)
+
 rosidl_generate_interfaces(${PROJECT_NAME}
+  ${action_files}
+  ${msg_files}
   ${srv_files}
 )
 

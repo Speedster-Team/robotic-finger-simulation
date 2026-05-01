@@ -41,6 +41,9 @@ public:
   /// \param repeat - A 1 or 0 indicating if trajectory should be repeated
   void send_command(std::vector<std::vector<float>> q_motor_list, int length, int repeat);
 
+  /// \brief Send go command to teensy
+  void send_start();
+
   /// \brief Send stop command to teensy
   void send_stop();
 
@@ -72,6 +75,8 @@ private:
   float _mcp_flex_motor_pos;
   /// \brief The PIP flex motor position
   float _pip_flex_motor_pos;
+  /// \brief State variable showing if control is active
+  float _active;
 
 
 };

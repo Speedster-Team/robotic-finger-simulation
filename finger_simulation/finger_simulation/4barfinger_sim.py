@@ -36,6 +36,8 @@ from pydrake.systems.primitives import ConstantVectorSource
 
 import rclpy
 
+from std_srvs.srv import Empty
+
 
 class FingerSimulation():
     """Class runs drake simulation of the finger."""
@@ -249,6 +251,14 @@ class FingerSimulation():
                     f'{body_A}<->{body_B} '
                     f'force={info.contact_force()}')
 
+    def create_service(self, node):
+        """Create a dummy service to indicate drake has started up."""
+        node.create_service(Empty, '/heartbeat', self.service_callback)
+
+    def service_callback(self):
+        """Empty callback function for dummy service."""
+        pass
+
 
 def main():
     """Set up and start simulation."""
@@ -315,7 +325,8 @@ def main():
     )
 
     fingersim.build_diagram()
-    fingersim.save_diagram()
+    # fingersim.save_diagram()
+    fingersim.create_service(node)
     fingersim.run()
 
 

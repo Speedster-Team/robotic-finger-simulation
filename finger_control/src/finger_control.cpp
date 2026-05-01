@@ -15,6 +15,9 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
+#include "std_msgs/msg/empty.hpp"
+#include "std_srvs/srv/empty.hpp"
+
 #include "finger_interfaces/action/cartesian.hpp"
 
 using namespace std::chrono_literals;
@@ -30,6 +33,9 @@ public:
   FingerControl()
   : Node("finger_control")
   {
+    // wait for drake to startup
+    wait_for_drake_heartbeat();
+
     // create cartesian action client
     cartesian_client_ = rclcpp_action::create_client<Cartesian>(this,
       "/cartesian_move");
@@ -43,6 +49,9 @@ public:
       RCLCPP_INFO(get_logger(), "waiting for service to appear...");
     }
 
+    // sleep for 1 second
+    rclcpp::sleep_for(1000ms);
+
     // send test command
     std::vector<float> start = {0, 0.15, -0.05};
     std::vector<float> end   = {0, 0.08, -0.1};  
@@ -52,6 +61,20 @@ public:
 
 private:
   rclcpp_action::Client<Cartesian>::SharedPtr cartesian_client_;
+
+  void wait_for_drake_heartbeat() {
+    // create dummy client to wait until drake is initialized
+    auto heartbeat_client = create_client<std_srvs::srv::Empty>("/heartbeat", 10);
+
+    // wait for server to appear
+    while (!heartbeat_client->wait_for_service(1s)) {
+      if (!rclcpp::ok()) {
+        RCLCPP_ERROR(get_logger(), "client interrupted while waiting for service to appear.");
+        rclcpp::shutdown();
+      }
+      RCLCPP_INFO(get_logger(), "waiting for heartbeat service to appear...");
+    }
+  }
 
   void send_cartesian_goal(std::vector<std::vector<float>> waypoints)
   {

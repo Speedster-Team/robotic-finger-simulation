@@ -19,11 +19,13 @@
 #include "std_msgs/msg/float64_multi_array.hpp"
 
 #include "finger_interfaces/srv/send_command.hpp"
+#include "finger_interfaces/srv/start_stop_command.hpp"
+#include "finger_interfaces/msg/motor_feedback.hpp"
 
 using namespace std::chrono_literals;
 
 /// \brief State variable showing if data is ready to be sent to drake
-enum DataState
+enum State
 {
   READY,
   WAITING,
@@ -36,53 +38,112 @@ public:
   /// \brief Create an instance of SimulationBridge
   SimulationBridge()
   : Node("simulation_bridge"),
-    data_state_ (DataState::WAITING)
+    state_ (State::WAITING)
   {
-
-    // create publishers
-    motor_cmd_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/torque_cmd", 10);
-    action_feedback_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/motor_pos_action_feedback", 10);
-
-    // create subscriptions
-    auto motor_pos_sub_callback =
-      [](std_msgs::msg::Float64MultiArray::UniquePtr msg) -> void {
-        for (auto m : msg->data) {
-            // for now, print feedback
-          std::cout << float(m) << ' ';
-        }
-        std::cout << std::endl;
-      };
-
-    motor_feedback_sub_ = create_subscription<std_msgs::msg::Float64MultiArray>("/motor_position",
-      10, motor_pos_sub_callback);
-
-    // define service callback function
+    // define send service callback function
     auto send_service_callback =
       [this](const std::shared_ptr<finger_interfaces::srv::SendCommand::Request> request,
       std::shared_ptr<finger_interfaces::srv::SendCommand::Response> response) -> void
       {
+        RCLCPP_INFO(get_logger(), "send service request recieved...");
 
-        // save commands as vector
-        commands_ = std::vector<std::vector<float>>(request->length, std::vector<float>(3));
-        for (int i = 0; i < request->length; i++) {
-          commands_[i] = {request->mcp_splay[i], request->mcp_flex[i], request->pip_flex[i]};
+        // check that length field is filled
+        if (request->length == 0) {
+          response->success = 0;
+          RCLCPP_ERROR(get_logger(), "send service request rejected, message field 'length' is 0.");
+        } else if ((request->repeat != 0) && (request->repeat != 1)) {
+          response->success = 0;
+          RCLCPP_ERROR(get_logger(), "send service request rejected, message field 'request' is not 0 or 1.");
+        } else {
+          // save commands as vector
+          commands_ = std::vector<std::vector<float>>(request->length, std::vector<float>(3));
+          for (int i = 0; i < request->length; i++) {
+            commands_[i] = {request->mcp_splay[i], request->mcp_flex[i], request->pip_flex[i]};
+          }
+
+          // save length and repeat
+          length_ = request->length;
+          repeat_ = request->repeat;
+
+          // simulation will always recieve command
+          response->success = 1;
+
+          RCLCPP_INFO(get_logger(), "send service request completed.");
         }
+      };
+    // create callback group for send service
+    send_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-        // save length and repeat
-        length_ = request->length;
-        repeat_ = request->repeat;
+    // create send service
+    send_service_ = create_service<finger_interfaces::srv::SendCommand>("/send_command",
+      send_service_callback, rclcpp::ServicesQoS(), send_cb_group_);
+
+    // define start service callback function
+    auto start_service_callback =
+      [this](const std::shared_ptr<finger_interfaces::srv::StartStopCommand::Request>,
+      std::shared_ptr<finger_interfaces::srv::StartStopCommand::Response> response) -> void
+      {
+        RCLCPP_INFO(get_logger(), "start service request recieved...");
 
         // simulation will always recieve command
         response->success = 1;
 
-        // flip data state
-        data_state_ = DataState::READY;
+        // make state ready
+        state_ = State::READY;
 
+        RCLCPP_INFO(get_logger(), "start service request completed...");
       };
 
-    // create service
-    send_service_ = create_service<finger_interfaces::srv::SendCommand>("/send_command",
-      send_service_callback);
+    // create callback group for start service
+    start_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
+    // create start service
+    start_service_ = create_service<finger_interfaces::srv::StartStopCommand>("/start_command",
+      start_service_callback, rclcpp::ServicesQoS(), start_cb_group_);
+
+    // define stop service callback function
+    auto stop_service_callback =
+      [this](const std::shared_ptr<finger_interfaces::srv::StartStopCommand::Request>,
+      std::shared_ptr<finger_interfaces::srv::StartStopCommand::Response> response) -> void
+      {
+        RCLCPP_INFO(get_logger(), "stop service request recieved...");
+
+        // simulation will always recieve command
+        response->success = 1;
+
+        // make state waiting
+        state_ = State::WAITING;
+
+        RCLCPP_INFO(get_logger(), "stop service request completed...");
+      };
+
+    // create callback group for stop service
+    stop_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
+    // create stop service
+    stop_service_ = create_service<finger_interfaces::srv::StartStopCommand>("/stop_command",
+      stop_service_callback, rclcpp::ServicesQoS(), stop_cb_group_);
+
+    // create publishers
+    motor_cmd_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/torque_cmd", 10);
+    action_feedback_pub_ = create_publisher<finger_interfaces::msg::MotorFeedback>("/motor_pos_action_feedback", 10);
+
+    // create drake feedback subscription, forward as feedback
+    auto motor_pos_sub_callback =
+      [this](std_msgs::msg::Float64MultiArray::UniquePtr msg) -> void {
+        // for (auto m : msg->data) {
+        //     // for now, print feedback
+        //   std::cout << float(m) << ' ';
+        // }
+        // std::cout << std::endl;
+        
+        motor_feedback_.motor_positions = std::vector<float>(msg->data.begin(), msg->data.begin() + 2);
+        motor_feedback_.active = (state_ == State::READY) ? 1.0 : 0.0;
+        action_feedback_pub_->publish(motor_feedback_);
+      };
+
+    motor_feedback_sub_ = create_subscription<std_msgs::msg::Float64MultiArray>("/motor_position",
+      10, motor_pos_sub_callback);
 
     // define timer callback and init
     auto command_sender_timer_callback =
@@ -90,8 +151,10 @@ public:
         // init count
         static auto count = 0;
 
-        if (data_state_ == DataState::READY) {
-            // publish commands to drake
+        if (state_ == State::READY) {
+          RCLCPP_INFO_ONCE(get_logger(), "publishing commands to drake...");
+
+          // publish commands to drake
           auto msg = std_msgs::msg::Float64MultiArray();
           msg.data = {commands_.at(count).at(0), commands_.at(count).at(1),
             commands_.at(count).at(2)};
@@ -105,7 +168,7 @@ public:
             count = 0;
             if (repeat_ == 0) {
                     // disable control if no repeat
-              data_state_ = DataState::WAITING;
+              state_ = State::WAITING;
             }
           }
         }
@@ -117,12 +180,17 @@ public:
 
 private:
   rclcpp::TimerBase::SharedPtr timer_;
-  DataState data_state_;
+  State state_;
+  finger_interfaces::msg::MotorFeedback motor_feedback_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr motor_cmd_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr action_feedback_pub_;
+  rclcpp::Publisher<finger_interfaces::msg::MotorFeedback>::SharedPtr action_feedback_pub_;
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr motor_feedback_sub_;
   rclcpp::Service<finger_interfaces::srv::SendCommand>::SharedPtr send_service_;
+  rclcpp::Service<finger_interfaces::srv::StartStopCommand>::SharedPtr start_service_;
+  rclcpp::Service<finger_interfaces::srv::StartStopCommand>::SharedPtr stop_service_;
   rclcpp::CallbackGroup::SharedPtr send_cb_group_;
+  rclcpp::CallbackGroup::SharedPtr start_cb_group_;
+  rclcpp::CallbackGroup::SharedPtr stop_cb_group_;
   std::vector<std::vector<float>> commands_;
   int length_;
   int repeat_;
@@ -131,11 +199,11 @@ private:
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<SimulationBridge>());
-//   auto node = std::make_shared<HardwareBridge>();
-//   rclcpp::executors::MultiThreadedExecutor exec;
-//   exec.add_node(node);
-//   exec.spin();
+  // rclcpp::spin(std::make_shared<SimulationBridge>());
+  auto node = std::make_shared<SimulationBridge>();
+  rclcpp::executors::MultiThreadedExecutor exec;
+  exec.add_node(node);
+  exec.spin();
   rclcpp::shutdown();
   return 0;
 }

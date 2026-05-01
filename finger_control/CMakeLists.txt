@@ -8,6 +8,8 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(finger_interfaces REQUIRED)
 
 add_executable(finger_control src/finger_control.cpp)
@@ -15,6 +17,8 @@ add_executable(finger_control src/finger_control.cpp)
 target_link_libraries(finger_control
   rclcpp::rclcpp
   rclcpp_action::rclcpp_action
+  ${std_msgs_TARGETS}
+  ${std_srvs_TARGETS}
   ${finger_interfaces_TARGETS}
 )
 
