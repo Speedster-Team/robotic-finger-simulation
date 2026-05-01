@@ -126,19 +126,13 @@ public:
       stop_service_callback, rclcpp::ServicesQoS(), stop_cb_group_);
 
     // create publishers
-    motor_cmd_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/torque_cmd", 10);
+    motor_cmd_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/cmd_position", 10);
     action_feedback_pub_ =
       create_publisher<finger_interfaces::msg::MotorFeedback>("/motor_pos_action_feedback", 10);
 
     // create drake feedback subscription, forward as feedback
     auto motor_pos_sub_callback =
       [this](std_msgs::msg::Float64MultiArray::UniquePtr msg) -> void {
-        // for (auto m : msg->data) {
-        //     // for now, print feedback
-        //   std::cout << float(m) << ' ';
-        // }
-        // std::cout << std::endl;
-
         motor_feedback_.motor_positions = std::vector<float>(msg->data.begin(),
         msg->data.begin() + 2);
         motor_feedback_.active = (state_ == State::READY) ? 1.0 : 0.0;
@@ -156,12 +150,18 @@ public:
 
         if (state_ == State::READY) {
           RCLCPP_INFO_ONCE(get_logger(), "publishing commands to drake...");
+          RCLCPP_INFO_STREAM(get_logger(), count);
 
           // publish commands to drake
           auto msg = std_msgs::msg::Float64MultiArray();
           msg.data = {commands_.at(count).at(0), commands_.at(count).at(1),
             commands_.at(count).at(2)};
           motor_cmd_pub_->publish(msg);
+
+          // publish same as feedback
+          motor_feedback_.motor_positions = std::vector<float>(msg.data.begin(), msg.data.begin() + 2);
+          motor_feedback_.active = (state_ == State::READY) ? 1.0 : 0.0;
+          action_feedback_pub_->publish(motor_feedback_);
 
             // increment counter
           count++;

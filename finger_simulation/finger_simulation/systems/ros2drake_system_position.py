@@ -22,38 +22,37 @@ class Ros2Drake(LeafSystem):
 
         # Internal state: holds the last received torque command
         # This is the ZOH behavior — persists until next message
-        self.torque_state_index = self.DeclareDiscreteState(self.nu)
+        self.position_state_index = self.DeclareDiscreteState(self.nu)
         self.DeclarePerStepDiscreteUpdateEvent(
-            self._update_torque)
-        
+            self._update_position)
+
         # Output port for flex motors (all but last)
         self.DeclareVectorOutputPort(
-            'motor_torque', self.nu, self._calc_torque
+            'motor_position', self.nu, self._calc_position
         )
 
         # Set subscriber
-        self._latest_torque = np.zeros(self.nu)
+        self._latest_position = np.zeros(self.nu)
         self._sub = self._node.create_subscription(
             Float64MultiArray,
-            '/cmd_torque',
-            self._ros_torque_callback,
+            '/cmd_position',
+            self._ros_position_callback,
             10,
         )
 
-    def _calc_torque(self, context, output):
-        """Input motor torques."""
+    def _calc_position(self, context, output):
+        """Input motor positions."""
         state = context.get_discrete_state(
-            self.torque_state_index).get_value()
+            self.position_state_index).get_value()
         output.SetFromVector(state)
 
-    def _ros_torque_callback(self, msg):
-        """Save new torque topic messages."""
+    def _ros_position_callback(self, msg):
+        """Save new position topic messages."""
         data = list(msg.data)
         if len(data) == 3:
-            self._latest_torque = np.array((data + [0.0] * self.nu)[:self.nu])
+            self._latest_position = np.array((data + [0.0] * self.nu)[:self.nu])
 
-    def _update_torque(self, context, discrete_state):
+    def _update_position(self, context, discrete_state):
         """Spin ROS node every time there is a simulation update for msgs."""
         rclpy.spin_once(self._node, timeout_sec=0)
-        discrete_state.set_value(self._latest_torque)
-
+        discrete_state.set_value(self._latest_position)

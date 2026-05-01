@@ -72,6 +72,9 @@ void SerialInterface::send_command(
 void SerialInterface::send_start()
 {
 
+  // set message status
+  _msg_status = MessageStatus::NO_STATUS;
+
   // Assemble payload
   std::string payload = "G\n";
   payload += "end\n";     // "end" on its own line
@@ -82,6 +85,8 @@ void SerialInterface::send_start()
 
 void SerialInterface::send_stop()
 {
+  // set message status
+  _msg_status = MessageStatus::NO_STATUS;
 
   // Assemble payload
   std::string payload = "S\n";
@@ -93,7 +98,6 @@ void SerialInterface::send_stop()
 
 void SerialInterface::parse_response()
 {
-  // check for
   // get data, wait for 1ms if no \n char
   std::string response = _serial->readline();
 
@@ -105,7 +109,7 @@ void SerialInterface::parse_response()
   // Parse and validate
   int resp_success;
 
-  if (sscanf(response.c_str(), "%f %f %f %d", &_mcp_splay_motor_pos, &_mcp_flex_motor_pos,
+  if (sscanf(response.c_str(), "%f %f %f %f", &_mcp_splay_motor_pos, &_mcp_flex_motor_pos,
     &_pip_flex_motor_pos, &_active) == 4)
   {
     _fdbk_status = FeedbackStatus::NEW_FEEDBACK;
@@ -118,7 +122,7 @@ void SerialInterface::parse_response()
       _msg_status = MessageStatus::FAILURE;
     }
   } else {
-    std::cerr << "Could not parse Teensy response." << std::endl;
+    std::cerr << "Could not parse Teensy response: " << response << std::endl;
   }
 }
 

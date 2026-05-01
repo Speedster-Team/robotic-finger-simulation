@@ -50,7 +50,7 @@ public:
     }
 
     // sleep for 1 second
-    rclcpp::sleep_for(1000ms);
+    rclcpp::sleep_for(5000ms);
 
     // send test command
     std::vector<float> start = {0, 0.15, -0.05};

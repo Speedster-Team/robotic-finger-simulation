@@ -34,9 +34,18 @@ class FingerPulleySystem(LeafSystem):
         # declare input and output ports with functions
         self.tendon_input_port = self.DeclareVectorInputPort(
             'tendon_tension', nu)
-        self.DeclareVectorOutputPort('joint_torque', nu, self._calc_tension)
+        self.DeclareVectorOutputPort('joint_torque', nu, self._calc_torque)
 
-    def _calc_tension(self, context, output):
+        self.position_input_port = self.DeclareVectorInputPort(
+            'tendon_position', nu)
+        self.DeclareVectorOutputPort('joint_position', nu, self._calc_position)
+
+    def _calc_torque(self, context, output):
         """Convert motor torque to tendon forces."""
         tension = self.tendon_input_port.Eval(context)
         output.SetFromVector(self.St_inv.T @ tension)
+
+    def _calc_position(self, context, output):
+        """Convert motor torque to tendon forces."""
+        position = self.position_input_port.Eval(context)
+        output.SetFromVector(self.St_inv.T @ position)

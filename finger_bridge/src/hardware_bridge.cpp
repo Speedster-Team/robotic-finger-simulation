@@ -48,31 +48,43 @@ public:
       [this](const std::shared_ptr<finger_interfaces::srv::SendCommand::Request> request,
       std::shared_ptr<finger_interfaces::srv::SendCommand::Response> response) -> void
       {
+        RCLCPP_INFO(get_logger(), "send service request recieved...");
 
-        // reformat
-        std::vector<std::vector<float>> commands_(request->length, std::vector<float>(3));
-        for (int i = 0; i < request->length; i++) {
-          commands_[i] = {request->mcp_splay[i], request->mcp_flex[i], request->pip_flex[i]};
-        }
-
-        // save length and repeat
-        length_ = request->length;
-        repeat_ = request->repeat;
-
-        // send serial command
-        serial_interface_->send_command(commands_, request->length, request->repeat);
-
-        // wait for result
-        while (serial_interface_->get_message_status() == MessageStatus::NO_STATUS) {
-          //idle
-          // std::cout << "idling" << std::endl;
-        }
-
-        // set return based on result
-        if (serial_interface_->get_message_status() == MessageStatus::SUCCESS) {
-          response->success = 1;
-        } else {
+        // check that length field is filled
+        if (request->length == 0) {
           response->success = 0;
+          RCLCPP_ERROR(get_logger(), "send service request rejected, message field 'length' is 0.");
+        } else if ((request->repeat != 0) && (request->repeat != 1)) {
+          response->success = 0;
+          RCLCPP_ERROR(get_logger(),
+          "send service request rejected, message field 'request' is not 0 or 1.");
+        } else {
+
+          // reformat
+          commands_ = std::vector<std::vector<float>>(request->length, std::vector<float>(3));
+          for (int i = 0; i < request->length; i++) {
+            commands_[i] = {request->mcp_splay[i], request->mcp_flex[i], request->pip_flex[i]};
+          }
+
+          // save length and repeat
+          length_ = request->length;
+          repeat_ = request->repeat;
+
+          // send serial command
+          serial_interface_->send_command(commands_, request->length, request->repeat);
+
+          // wait for result
+          while (serial_interface_->get_message_status() == MessageStatus::NO_STATUS) {
+          }
+
+          // set return based on result
+          if (serial_interface_->get_message_status() == MessageStatus::SUCCESS) {
+            response->success = 1;
+          } else {
+            response->success = 0;
+          }
+
+          RCLCPP_INFO(get_logger(), "send service request completed.");
         }
       };
 
@@ -88,6 +100,8 @@ public:
       [this](const std::shared_ptr<finger_interfaces::srv::StartStopCommand::Request>,
       std::shared_ptr<finger_interfaces::srv::StartStopCommand::Response> response) -> void
       {
+        RCLCPP_INFO(get_logger(), "start service request recieved...");
+
         // send serial command
         serial_interface_->send_start();
 
@@ -106,6 +120,8 @@ public:
 
         // make state ready
         state_ = State::READY;
+
+        RCLCPP_INFO(get_logger(), "start service request completed.");
       };
 
     // create callback group for start service
@@ -120,6 +136,8 @@ public:
       [this](const std::shared_ptr<finger_interfaces::srv::StartStopCommand::Request>,
       std::shared_ptr<finger_interfaces::srv::StartStopCommand::Response> response) -> void
       {
+        RCLCPP_INFO(get_logger(), "stop service request recieved...");
+
         // send serial command
         serial_interface_->send_stop();
 
@@ -138,6 +156,8 @@ public:
 
         // make state waiting
         state_ = State::WAITING;
+
+        RCLCPP_INFO(get_logger(), "stop service request completed.");
       };
 
     // create callback group for stop service
@@ -148,9 +168,9 @@ public:
       stop_service_callback, rclcpp::ServicesQoS(), stop_cb_group_);
 
     // create publishers
-    motor_cmd_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/torque_cmd", 10);
+    motor_cmd_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/cmd_position", 10);
     action_feedback_pub_ =
-      create_publisher<finger_interfaces::msg::MotorFeedback>("/motor_pos_feedback", 10);
+      create_publisher<finger_interfaces::msg::MotorFeedback>("/motor_pos_action_feedback", 10);
 
     // define feedback timer callback and init
     auto feedback_timer_callback =
@@ -166,9 +186,10 @@ public:
           // std::cout << std::endl;
 
           motor_feedback_.motor_positions = std::vector<float>(fb.begin(), fb.begin() + 2);
-          motor_feedback_.active = fb.back();
+          motor_feedback_.active = fb.at(3);
           action_feedback_pub_->publish(motor_feedback_);
         }
+
       };
     feedback_timer_ = this->create_wall_timer(1ms, feedback_timer_callback);
 
@@ -179,6 +200,9 @@ public:
         static auto count = 0;
 
         if (state_ == State::READY) {
+          RCLCPP_INFO_ONCE(get_logger(), "publishing commands to drake...");
+          RCLCPP_INFO_STREAM(get_logger(), count);
+
           // publish commands to drake
           auto msg = std_msgs::msg::Float64MultiArray();
           msg.data = {commands_.at(count).at(0), commands_.at(count).at(1),

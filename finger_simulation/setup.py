@@ -49,6 +49,7 @@ setup(
     entry_points={
         'console_scripts': [
             'basicsim = finger_simulation.basic_finger_sim:main',
+            'basic = finger_simulation.basic_sim:main',
             '4barsim = finger_simulation.4barfinger_sim:main',
         ],
     },

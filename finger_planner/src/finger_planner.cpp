@@ -189,7 +189,7 @@ public:
         timer_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         action_timer_ = create_wall_timer(100ms, [this, goal_handle](){
               return this->execute_cartesian_goal(goal_handle);
-                                                                                                                        },
+            },
         timer_cb_group_);
       };
 
@@ -228,7 +228,7 @@ private:
   {
     if (cmd_state_ == CmdState::IDLE) {
       // do nothing, wait for service callbacks to be called
-      RCLCPP_INFO(get_logger(), "idling...");
+      RCLCPP_INFO_ONCE(get_logger(), "idling...");
 
     } else if (cmd_state_ == CmdState::BEGIN) {
       RCLCPP_INFO(this->get_logger(), "Executing goal");
@@ -318,9 +318,9 @@ private:
       RCLCPP_INFO_STREAM_ONCE(get_logger(), "Control started...");
 
       // monitor feedback for stoppage
-      if (motor_feedback_.active < 1e-4) {
+      if (motor_feedback_.active < 1e-4 && motor_feedback_.active > -1e-4) {
         RCLCPP_INFO_STREAM(get_logger(), "Control stopped, stopping action.");
-
+        
         // define callback function
         auto stop_client_callback =
           [this,

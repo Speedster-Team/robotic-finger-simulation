@@ -25,10 +25,20 @@ class MotorTorqueToForceSystem(LeafSystem):
         nu = 3
 
         # declare input and output ports with functions
-        self.input_port = self.DeclareVectorInputPort('motor_torque', nu)
+        self.torque_input_port = self.DeclareVectorInputPort(
+            'motor_torque', nu)
         self.DeclareVectorOutputPort('tendon_tension', nu, self._calc_force)
+
+        self.position_input_port = self.DeclareVectorInputPort(
+            'motor_position', nu)
+        self.DeclareVectorOutputPort('tendon_position', nu, self._calc_linear)
 
     def _calc_force(self, context, output):
         """Convert motor torque to tendon forces."""
-        torque = self.input_port.Eval(context)
+        torque = self.torque_input_port.Eval(context)
         output.SetFromVector(self.Ra @ torque)
+
+    def _calc_linear(self, context, output):
+        """Convert motor position to tendon position."""
+        position = self.position_input_port.Eval(context)
+        output.SetFromVector(self.Ra @ position)

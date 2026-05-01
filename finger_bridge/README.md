@@ -7,18 +7,8 @@ This package serves as middleman shuffling commands between the simulation/harwa
 
 ## Launch files
 
+
 ## Design
-
-### Topics
-all versions:
-- subscribes to '/commands' of custom type for finger commands
-
-simulation_bridge:
-- publishes to '/motor_torques' at 100Hz like the 
- ** there needs to be some sort of position to torque control going on here
-hardware_bridge:
-- sends complete trajectories over to teensy
-- recieves feedback
 
 ### Laptop - Teensy communication standard
 
@@ -36,6 +26,13 @@ This command is used to send a position trajectory for the teensy to send to mot
     <data_crc8: uint_8> 
     end
 
+#### Go command from laptop to teensy
+This command will start the teensy tracking the trajectory.
+
+    <command_type = G>
+    end
+
+
 #### Stop command from laptop to teensy
 This command will stop the teensy safely.
 
@@ -45,11 +42,10 @@ This command will stop the teensy safely.
 #### General feedback from teensy to laptop
 The teensy is constantly sending these commands back to the laptop.
 
-    <mcp_splay_position: float> <mcp_flex_position: float> <pip_flex_position: float>
+    <mcp_splay_position: float> <mcp_flex_position: float> <pip_flex_position: float> <active_bool: 1.0 | 0.0 >
 
 #### Message recieved feedback from teensy to laptop
 This message is response for a message recieved from the laptop.
 
     <success_bool >
-
 
