@@ -29,7 +29,6 @@ from pydrake.geometry import MeshcatVisualizerParams
 from pydrake.math import RigidTransform, RollPitchYaw
 from pydrake.multibody.parsing import Parser
 from pydrake.multibody.plant import AddMultibodyPlant, MultibodyPlantConfig
-from pydrake.multibody.tree import JointActuatorIndex
 from pydrake.systems.analysis import Simulator
 from pydrake.systems.framework import DiagramBuilder, TriggerType
 from pydrake.systems.primitives import ConstantVectorSource
@@ -114,7 +113,8 @@ class FingerSimulation():
 
         # Derive workspace install dir from any known package
         share_dir = get_package_share_directory('finger_simulation')
-        install_dir = os.path.join(share_dir, '..', '..', '..')  # share/pkg -> install/
+        # share/pkg -> install/
+        install_dir = os.path.join(share_dir, '..', '..', '..')
         pm.PopulateFromFolder(os.path.realpath(install_dir))
 
         # Weld the grass to the world so that it's fixed during the simulation.
@@ -205,10 +205,8 @@ class FingerSimulation():
         self.simulator_context = simulator.get_mutable_context()
         simulator.set_target_realtime_rate(0)
         # After plant.Finalize()
-        for i in range(self.plant.num_actuators()):
-            actuator = self.plant.get_joint_actuator(JointActuatorIndex(i))
-            print(f'Actuator index {i}: name={actuator.name()}, joint={actuator.joint().name()}')
-        self.diagram.GetMutableSubsystemContext(self.plant, self.simulator_context)
+        self.diagram.GetMutableSubsystemContext(
+            self.plant, self.simulator_context)
 
         self.plant_context = self.diagram.GetMutableSubsystemContext(
             self.plant, self.simulator_context)
@@ -248,8 +246,8 @@ class FingerSimulation():
             body_B = self.plant.get_body(info.bodyB_index()).name()
             if 'box' in body_A or 'box' in body_B:
                 print(f't={self.simulator_context.get_time():.2f} '
-                    f'{body_A}<->{body_B} '
-                    f'force={info.contact_force()}')
+                      f'{body_A}<->{body_B} '
+                      f'force={info.contact_force()}')
 
     def create_service(self, node):
         """Create a dummy service to indicate drake has started up."""

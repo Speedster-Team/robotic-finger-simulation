@@ -46,7 +46,6 @@ class TendonFeedbackSystem(LeafSystem):
         self.DeclareVectorOutputPort(
             'tendon_position', nu, self._tendon_pos)
 
-
         # structure of finger state
         # state x (size 10) = [q_splay, q_mcp_flex, q_pip1, q_dip1, q_pip2,
         #                      v_splay, v_mcp_flex, v_pip1, v_dip1, v_pip2]

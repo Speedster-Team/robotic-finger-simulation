@@ -19,7 +19,7 @@ class MotorTorqueToForceSystem(LeafSystem):
         self.Ra = np.array([[ra, 0, 0],
                             [0, rb, 0],
                             [0, 0, rc]])
-        
+
         # self.R_inv = np.linalg.pinv(self.Ra)  # invert
 
         nu = 3

@@ -25,7 +25,7 @@ class FingerPulleySystem(LeafSystem):
         self.St = np.array([[r11, -r3, -r1],  # splay joint
                             [0,    r7,  r5],  # mcp joint
                             [0,     0,  r9]])  # pip/dip joint
-        
+
         self.St_inv = np.linalg.pinv(self.St)
 
         # init size of input and output

@@ -9,11 +9,11 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
-set (action_files
+set(action_files
   "action/Cartesian.action"
 )
 
-set (msg_files
+set(msg_files
   "msg/MotorFeedback.msg"
 )
 

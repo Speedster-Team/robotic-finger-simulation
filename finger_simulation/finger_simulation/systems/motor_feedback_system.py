@@ -6,22 +6,22 @@ from pydrake.systems.framework import LeafSystem
 
 
 class MotorFeedbackSystem(LeafSystem):
-    """Leaf system computing motor velocities"""
+    """Leaf system computing motor velocities."""
 
     def __init__(self):
         """Create instance of MotorFeedbackSystem."""
         super().__init__()
 
-       # define radii
+        # define radii
         ra, rb, rc = 0.0025, 0.0025, 0.0025
 
         # define radius matrix
         self.Ra = np.array([[ra, 0, 0],
                             [0, rb, 0],
                             [0, 0, rc]])
-        
+
         self.Ra_inv = np.linalg.pinv(self.Ra)
-        
+
         nu = 3
 
         # declare input and output ports with functions
