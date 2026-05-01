@@ -53,7 +53,8 @@ public:
           RCLCPP_ERROR(get_logger(), "send service request rejected, message field 'length' is 0.");
         } else if ((request->repeat != 0) && (request->repeat != 1)) {
           response->success = 0;
-          RCLCPP_ERROR(get_logger(), "send service request rejected, message field 'request' is not 0 or 1.");
+          RCLCPP_ERROR(get_logger(),
+          "send service request rejected, message field 'request' is not 0 or 1.");
         } else {
           // save commands as vector
           commands_ = std::vector<std::vector<float>>(request->length, std::vector<float>(3));
@@ -126,7 +127,8 @@ public:
 
     // create publishers
     motor_cmd_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/torque_cmd", 10);
-    action_feedback_pub_ = create_publisher<finger_interfaces::msg::MotorFeedback>("/motor_pos_action_feedback", 10);
+    action_feedback_pub_ =
+      create_publisher<finger_interfaces::msg::MotorFeedback>("/motor_pos_action_feedback", 10);
 
     // create drake feedback subscription, forward as feedback
     auto motor_pos_sub_callback =
@@ -136,8 +138,9 @@ public:
         //   std::cout << float(m) << ' ';
         // }
         // std::cout << std::endl;
-        
-        motor_feedback_.motor_positions = std::vector<float>(msg->data.begin(), msg->data.begin() + 2);
+
+        motor_feedback_.motor_positions = std::vector<float>(msg->data.begin(),
+        msg->data.begin() + 2);
         motor_feedback_.active = (state_ == State::READY) ? 1.0 : 0.0;
         action_feedback_pub_->publish(motor_feedback_);
       };

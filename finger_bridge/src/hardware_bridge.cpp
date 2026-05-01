@@ -39,7 +39,7 @@ public:
     serial_interface_ (std::make_shared<SerialInterface>()),
     state_ (State::WAITING)
   {
-    // init motor feedback 
+    // init motor feedback
     motor_feedback_.motor_positions = {0, 0, 0};
     motor_feedback_.active = 0.0;
 
@@ -149,7 +149,8 @@ public:
 
     // create publishers
     motor_cmd_pub_ = create_publisher<std_msgs::msg::Float64MultiArray>("/torque_cmd", 10);
-    action_feedback_pub_ = create_publisher<finger_interfaces::msg::MotorFeedback>("/motor_pos_feedback", 10);
+    action_feedback_pub_ =
+      create_publisher<finger_interfaces::msg::MotorFeedback>("/motor_pos_feedback", 10);
 
     // define feedback timer callback and init
     auto feedback_timer_callback =

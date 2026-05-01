@@ -54,7 +54,7 @@ public:
 
     // send test command
     std::vector<float> start = {0, 0.15, -0.05};
-    std::vector<float> end   = {0, 0.08, -0.1};  
+    std::vector<float> end = {0, 0.08, -0.1};
     std::vector<std::vector<float>> waypoints = {start, end};
     send_cartesian_goal(waypoints);
   }
@@ -62,7 +62,8 @@ public:
 private:
   rclcpp_action::Client<Cartesian>::SharedPtr cartesian_client_;
 
-  void wait_for_drake_heartbeat() {
+  void wait_for_drake_heartbeat()
+  {
     // create dummy client to wait until drake is initialized
     auto heartbeat_client = create_client<std_srvs::srv::Empty>("/heartbeat", 10);
 
@@ -85,9 +86,9 @@ private:
     // create goal request
     goal_msg.length = int(waypoints.size());
     for (auto & wp : waypoints) {
-        goal_msg.x.push_back(wp.at(0));
-        goal_msg.y.push_back(wp.at(1));
-        goal_msg.z.push_back(wp.at(2));
+      goal_msg.x.push_back(wp.at(0));
+      goal_msg.y.push_back(wp.at(1));
+      goal_msg.z.push_back(wp.at(2));
     }
 
     RCLCPP_INFO(this->get_logger(), "Sending goal");

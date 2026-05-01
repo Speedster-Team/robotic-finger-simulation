@@ -135,6 +135,7 @@ FeedbackStatus SerialInterface::get_feedback_status()
 std::vector<float> SerialInterface::get_feedback()
 {
   _fdbk_status = FeedbackStatus::NOTHING_NEW;
-  return std::vector<float> {_mcp_splay_motor_pos, _mcp_flex_motor_pos, _pip_flex_motor_pos, _active};
+  return std::vector<float> {_mcp_splay_motor_pos, _mcp_flex_motor_pos, _pip_flex_motor_pos,
+    _active};
 
 }
