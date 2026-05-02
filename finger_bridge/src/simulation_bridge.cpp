@@ -69,7 +69,7 @@ public:
           // simulation will always recieve command
           response->success = 1;
 
-          RCLCPP_INFO(get_logger(), "send service request completed.");
+          RCLCPP_INFO_STREAM(get_logger(), "send service request completed, response: " << response->success);
         }
       };
     // create callback group for send service
@@ -92,7 +92,7 @@ public:
         // make state ready
         state_ = State::READY;
 
-        RCLCPP_INFO(get_logger(), "start service request completed...");
+        RCLCPP_INFO_STREAM(get_logger(), "start service request completed, response: " << response->success);
       };
 
     // create callback group for start service
@@ -115,7 +115,7 @@ public:
         // make state waiting
         state_ = State::WAITING;
 
-        RCLCPP_INFO(get_logger(), "stop service request completed...");
+        RCLCPP_INFO_STREAM(get_logger(), "stop service request completed, response: " << response->success);
       };
 
     // create callback group for stop service
@@ -177,8 +177,6 @@ public:
         }
       };
     timer_ = this->create_wall_timer(10ms, command_sender_timer_callback);
-
-
   }
 
 private:

@@ -74,8 +74,7 @@ public:
           serial_interface_->send_command(commands_, request->length, request->repeat);
 
           // wait for result
-          while (serial_interface_->get_message_status() == MessageStatus::NO_STATUS) {
-          }
+          while (serial_interface_->get_message_status() == MessageStatus::NO_STATUS) {}
 
           // set return based on result
           if (serial_interface_->get_message_status() == MessageStatus::SUCCESS) {
@@ -84,7 +83,7 @@ public:
             response->success = 0;
           }
 
-          RCLCPP_INFO(get_logger(), "send service request completed.");
+          RCLCPP_INFO_STREAM(get_logger(), "send service request completed, response: " << response->success);
         }
       };
 
@@ -114,14 +113,14 @@ public:
         // set return based on result
         if (serial_interface_->get_message_status() == MessageStatus::SUCCESS) {
           response->success = 1;
+
+          // make state ready
+          state_ = State::READY;
         } else {
           response->success = 0;
         }
 
-        // make state ready
-        state_ = State::READY;
-
-        RCLCPP_INFO(get_logger(), "start service request completed.");
+        RCLCPP_INFO_STREAM(get_logger(), "start service request completed, response: " << response->success);
       };
 
     // create callback group for start service
@@ -150,14 +149,14 @@ public:
         // set return based on result
         if (serial_interface_->get_message_status() == MessageStatus::SUCCESS) {
           response->success = 1;
+
+          // make state waiting
+          state_ = State::WAITING;
         } else {
           response->success = 0;
         }
 
-        // make state waiting
-        state_ = State::WAITING;
-
-        RCLCPP_INFO(get_logger(), "stop service request completed.");
+        RCLCPP_INFO_STREAM(get_logger(), "stop service request completed, response: " << response->success);
       };
 
     // create callback group for stop service
@@ -179,12 +178,8 @@ public:
 
         if (serial_interface_->get_feedback_status() == FeedbackStatus::NEW_FEEDBACK) {
           auto fb = serial_interface_->get_feedback();
-          // for (auto f : fb) {
-          //   // for now, print feedback
-          //   // std::cout << float(f) << ' ';
-          // }
-          // std::cout << std::endl;
 
+          // publish feedback to action feedback topic
           motor_feedback_.motor_positions = std::vector<float>(fb.begin(), fb.begin() + 2);
           motor_feedback_.active = fb.at(3);
           action_feedback_pub_->publish(motor_feedback_);
@@ -201,7 +196,6 @@ public:
 
         if (state_ == State::READY) {
           RCLCPP_INFO_ONCE(get_logger(), "publishing commands to drake...");
-          RCLCPP_INFO_STREAM(get_logger(), count);
 
           // publish commands to drake
           auto msg = std_msgs::msg::Float64MultiArray();

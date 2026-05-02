@@ -116,7 +116,7 @@ void SerialInterface::parse_response()
 
   } else if (sscanf(response.c_str(), "%d", &resp_success) == 1) {
     // check for success in message reception
-    if (resp_success == 0) {
+    if (resp_success == 1) {
       _msg_status = MessageStatus::SUCCESS;
     } else {
       _msg_status = MessageStatus::FAILURE;
