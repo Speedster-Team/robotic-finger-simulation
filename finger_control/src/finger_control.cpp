@@ -50,12 +50,15 @@ public:
     }
 
     // sleep for 1 second
-    rclcpp::sleep_for(5000ms);
+    rclcpp::sleep_for(3000ms);
 
     // send test command
     std::vector<float> start = {0, 0.15, -0.05};
     std::vector<float> end = {0, 0.08, -0.1};
     std::vector<std::vector<float>> waypoints = {start, end};
+    send_cartesian_goal(waypoints);
+
+    waypoints = {end, start};
     send_cartesian_goal(waypoints);
   }
 
@@ -91,16 +94,16 @@ private:
       goal_msg.z.push_back(wp.at(2));
     }
 
-    RCLCPP_INFO(this->get_logger(), "Sending goal");
+    RCLCPP_INFO(get_logger(), "Sending goal");
 
     auto send_goal_options = rclcpp_action::Client<Cartesian>::SendGoalOptions();
     send_goal_options.goal_response_callback =
       [this](const GoalHandleCartesian::SharedPtr & goal_handle)
       {
         if (!goal_handle) {
-          RCLCPP_ERROR(this->get_logger(), "Goal was rejected by server");
+          RCLCPP_ERROR(get_logger(), "Goal was rejected by server");
         } else {
-          RCLCPP_INFO(this->get_logger(), "Goal accepted by server, waiting for result");
+          RCLCPP_INFO(get_logger(), "Goal accepted by server, waiting for result");
         }
       };
 
@@ -117,21 +120,43 @@ private:
           case rclcpp_action::ResultCode::SUCCEEDED:
             break;
           case rclcpp_action::ResultCode::ABORTED:
-            RCLCPP_ERROR_STREAM(this->get_logger(), "Goal was aborted");
+            RCLCPP_ERROR_STREAM(get_logger(), "Goal was aborted");
             return;
           case rclcpp_action::ResultCode::CANCELED:
-            RCLCPP_ERROR_STREAM(this->get_logger(), "Goal was canceled");
+            RCLCPP_ERROR_STREAM(get_logger(), "Goal was canceled");
             return;
           default:
-            RCLCPP_ERROR_STREAM(this->get_logger(), "Unknown result code");
+            RCLCPP_ERROR_STREAM(get_logger(), "Unknown result code");
             return;
         }
 
-        RCLCPP_INFO_STREAM(this->get_logger(), "result code: " << result.result.get()->success);
+        RCLCPP_INFO_STREAM(get_logger(), "result code: " << result.result.get()->success);
       };
 
-    this->cartesian_client_->async_send_goal(goal_msg, send_goal_options);
-  }
+    auto goal_handle_future = cartesian_client_->async_send_goal(goal_msg, send_goal_options);
+    // Wait for goal to be accepted
+    if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), goal_handle_future) !=
+        rclcpp::FutureReturnCode::SUCCESS) {
+      RCLCPP_ERROR(get_logger(), "Failed to send goal");
+      return;
+    }
+    
+    auto goal_handle = goal_handle_future.get();
+    if (!goal_handle) {
+      RCLCPP_ERROR(get_logger(), "Goal rejected");
+      return;
+    }
+
+    // Now wait for the result
+    auto result_future = cartesian_client_->async_get_result(goal_handle);
+    if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result_future) !=
+        rclcpp::FutureReturnCode::SUCCESS) {
+      RCLCPP_ERROR(get_logger(), "Failed to get result");
+      return;
+    }
+    
+    RCLCPP_INFO(get_logger(), "Goal completed");
+    } 
 };
 
 int main(int argc, char * argv[])

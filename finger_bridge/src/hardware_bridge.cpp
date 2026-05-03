@@ -83,7 +83,7 @@ public:
             response->success = 0;
           }
 
-          RCLCPP_INFO_STREAM(get_logger(), "send service request completed, response: " << response->success);
+          RCLCPP_INFO_STREAM(get_logger(), "send service request completed, response: " << int(response->success));
         }
       };
 
@@ -120,7 +120,7 @@ public:
           response->success = 0;
         }
 
-        RCLCPP_INFO_STREAM(get_logger(), "start service request completed, response: " << response->success);
+        RCLCPP_INFO_STREAM(get_logger(), "start service request completed, response: " << int(response->success));
       };
 
     // create callback group for start service
@@ -156,7 +156,7 @@ public:
           response->success = 0;
         }
 
-        RCLCPP_INFO_STREAM(get_logger(), "stop service request completed, response: " << response->success);
+        RCLCPP_INFO_STREAM(get_logger(), "stop service request completed, response: " << int(response->success));
       };
 
     // create callback group for stop service

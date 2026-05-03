@@ -69,7 +69,7 @@ public:
           // simulation will always recieve command
           response->success = 1;
 
-          RCLCPP_INFO_STREAM(get_logger(), "send service request completed, response: " << response->success);
+          RCLCPP_INFO_STREAM(get_logger(), "send service request completed, response: " << int(response->success));
         }
       };
     // create callback group for send service
@@ -92,7 +92,7 @@ public:
         // make state ready
         state_ = State::READY;
 
-        RCLCPP_INFO_STREAM(get_logger(), "start service request completed, response: " << response->success);
+        RCLCPP_INFO_STREAM(get_logger(), "start service request completed, response: " << int(response->success));
       };
 
     // create callback group for start service
@@ -115,7 +115,7 @@ public:
         // make state waiting
         state_ = State::WAITING;
 
-        RCLCPP_INFO_STREAM(get_logger(), "stop service request completed, response: " << response->success);
+        RCLCPP_INFO_STREAM(get_logger(), "stop service request completed, response: " << int(response->success));
       };
 
     // create callback group for stop service
@@ -130,17 +130,9 @@ public:
     action_feedback_pub_ =
       create_publisher<finger_interfaces::msg::MotorFeedback>("/motor_pos_action_feedback", 10);
 
-    // create drake feedback subscription, forward as feedback
-    auto motor_pos_sub_callback =
-      [this](std_msgs::msg::Float64MultiArray::UniquePtr msg) -> void {
-        motor_feedback_.motor_positions = std::vector<float>(msg->data.begin(),
-        msg->data.begin() + 2);
-        motor_feedback_.active = (state_ == State::READY) ? 1.0 : 0.0;
-        action_feedback_pub_->publish(motor_feedback_);
-      };
-
-    motor_feedback_sub_ = create_subscription<std_msgs::msg::Float64MultiArray>("/motor_position",
-      10, motor_pos_sub_callback);
+    // init motor feedback as zeros
+    motor_feedback_.active = 0.0;
+    motor_feedback_.motor_positions = {0.0, 0.0, 0.0};
 
     // define timer callback and init
     auto command_sender_timer_callback =
@@ -150,20 +142,15 @@ public:
 
         if (state_ == State::READY) {
           RCLCPP_INFO_ONCE(get_logger(), "publishing commands to drake...");
-          RCLCPP_INFO_STREAM(get_logger(), count);
 
           // publish commands to drake
           auto msg = std_msgs::msg::Float64MultiArray();
           msg.data = {commands_.at(count).at(0), commands_.at(count).at(1),
             commands_.at(count).at(2)};
           motor_cmd_pub_->publish(msg);
-
-          // publish same as feedback
           motor_feedback_.motor_positions = std::vector<float>(msg.data.begin(), msg.data.begin() + 2);
-          motor_feedback_.active = (state_ == State::READY) ? 1.0 : 0.0;
-          action_feedback_pub_->publish(motor_feedback_);
 
-            // increment counter
+          // increment counter
           count++;
 
             // check for overflow
@@ -175,6 +162,10 @@ public:
             }
           }
         }
+
+        // publish same as feedback
+        motor_feedback_.active = (state_ == State::READY) ? 1.0 : 0.0;
+        action_feedback_pub_->publish(motor_feedback_);
       };
     timer_ = this->create_wall_timer(10ms, command_sender_timer_callback);
   }
@@ -185,7 +176,6 @@ private:
   finger_interfaces::msg::MotorFeedback motor_feedback_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr motor_cmd_pub_;
   rclcpp::Publisher<finger_interfaces::msg::MotorFeedback>::SharedPtr action_feedback_pub_;
-  rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr motor_feedback_sub_;
   rclcpp::Service<finger_interfaces::srv::SendCommand>::SharedPtr send_service_;
   rclcpp::Service<finger_interfaces::srv::StartStopCommand>::SharedPtr start_service_;
   rclcpp::Service<finger_interfaces::srv::StartStopCommand>::SharedPtr stop_service_;

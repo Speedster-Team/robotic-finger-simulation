@@ -67,16 +67,16 @@ TEST_CASE("Basic usage of Transformer class", "[Transformer]")
     SECTION("Joint to motor space")
     {
         // initialize joint angle
-        arma::vec q_joint = {0,0,1};
+        arma::vec q_joint = {.1,0,0};
 
         // calculate corresponding motor angles
         auto q_motor = transforms.joint_to_motor(q_joint);
 
-        //std::cout << "q_motor" << q_motor << std::endl;
+        std::cout << "q_motor" << q_motor << std::endl;
 
-        REQUIRE_THAT(q_motor(0), Catch::Matchers::WithinAbs(0, 1e-12));
-        REQUIRE_THAT(q_motor(1), Catch::Matchers::WithinAbs(0, 1e-12));
-        //REQUIRE_THAT(q_motor(2), Catch::Matchers::WithinAbs(1, 1e-12));
+        REQUIRE_THAT(q_motor(0), Catch::Matchers::WithinAbs(0.35, 1e-12));
+        REQUIRE_THAT(q_motor(1), Catch::Matchers::WithinAbs(-.18, 1e-12));
+        REQUIRE_THAT(q_motor(2), Catch::Matchers::WithinAbs(-0.32, 1e-12));
     }
 
     SECTION("Motor Space to Joint Space")
