@@ -20,6 +20,7 @@
 #include "finger_interfaces/srv/start_stop_command.hpp"
 #include "finger_interfaces/action/cartesian.hpp"
 #include "finger_interfaces/action/sinusoidal.hpp"
+#include "finger_interfaces/action/linear.hpp"
 #include "finger_interfaces/msg/motor_feedback.hpp"
 
 #include "fingerlib/joint_trajectory.hpp"
@@ -42,6 +43,7 @@ class FingerPlanner : public rclcpp::Node
 public:
   using GoalHandleCartesian = rclcpp_action::ServerGoalHandle<finger_interfaces::action::Cartesian>;
   using GoalHandleSinusoidal = rclcpp_action::ServerGoalHandle<finger_interfaces::action::Sinusoidal>;
+  using GoalHandleLinear = rclcpp_action::ServerGoalHandle<finger_interfaces::action::Linear>;
 
   FingerPlanner()
   : Node("finger_planner"),
@@ -279,6 +281,76 @@ public:
       rcl_action_server_get_default_options(),
       action_cb_group_);
 
+    // create linear move action
+    auto linear_handle_goal = [this](
+      const rclcpp_action::GoalUUID,
+      std::shared_ptr<const finger_interfaces::action::Linear::Goal> goal)
+      {
+        RCLCPP_INFO(get_logger(), "Received linear goal request:");
+
+        if ((int(goal->start.size()) == 3) && (int(goal->end.size()) == 3)) {
+          // check that start and end are within the joint limits
+          try {
+            RCLCPP_INFO_STREAM(get_logger(),
+          "start: (" << goal->start.at(0) << ", " << goal->start.at(1) << ", " <<
+              goal->start.at(2) << ")");
+            RCLCPP_INFO_STREAM(get_logger(),
+          "end: (" << goal->end.at(0) << ", " << goal->end.at(1) << ", " << goal->end.at(2) << ")");
+
+            arma::vec start_vec = {goal->start.at(0), goal->start.at(1), goal->start.at(2)};
+            arma::vec end_vec = {goal->start.at(0), goal->start.at(1), goal->start.at(2)};
+
+            auto start = transforms_->joint_to_end_effector(start_vec);
+            auto end = transforms_->joint_to_end_effector(end_vec);
+
+          } catch (std::runtime_error & e) {
+            RCLCPP_ERROR_STREAM(get_logger(),
+          "Goal request REJECTED because start or end is outside of joint limits!!");
+            return rclcpp_action::GoalResponse::REJECT;
+          }
+
+          // accept request
+          return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+        } else {
+          // print error
+          RCLCPP_INFO(get_logger(), "Goal request REJECTED because waypoints are malformed.");
+
+          // reject request
+          return rclcpp_action::GoalResponse::REJECT;
+        }
+      };
+
+    auto linear_handle_cancel = [this](
+      const std::shared_ptr<GoalHandleLinear>)
+      {
+        RCLCPP_INFO(this->get_logger(), "Received request to cancel linear goal.");
+        return rclcpp_action::CancelResponse::ACCEPT;
+      };
+
+    auto linear_handle_accepted = [this](
+      const std::shared_ptr<GoalHandleLinear> goal_handle)
+      {
+        // set cmd state
+        cmd_state_ = CmdState::BEGIN;
+
+        // init message attempts to 0 to be safe
+        msg_attempts_ = 0;
+
+        // start timer for action
+        action_timer_ = create_wall_timer(100ms, [this, goal_handle](){
+              return this->execute_linear_goal(goal_handle);
+          },
+      timer_cb_group_);
+      };
+
+    linear_action_server_ = rclcpp_action::create_server<finger_interfaces::action::Linear>(
+    this,
+    "/linear_move",
+    linear_handle_goal,
+    linear_handle_cancel,
+    linear_handle_accepted,
+    rcl_action_server_get_default_options(),
+    action_cb_group_);
   }
 
 private:
@@ -306,11 +378,13 @@ private:
   rclcpp::CallbackGroup::SharedPtr timer_cb_group_;
   rclcpp_action::Server<finger_interfaces::action::Cartesian>::SharedPtr cartesian_action_server_;
   rclcpp_action::Server<finger_interfaces::action::Sinusoidal>::SharedPtr sinusoidal_action_server_;
+  rclcpp_action::Server<finger_interfaces::action::Linear>::SharedPtr linear_action_server_;
   rclcpp::TimerBase::SharedPtr action_timer_;
   std::shared_ptr<Transformer> transforms_;
   std::shared_ptr<JointTrajectory> generator_;
   std::shared_ptr<finger_interfaces::action::Cartesian::Result> cartesian_result_;
   std::shared_ptr<finger_interfaces::action::Sinusoidal::Result> sinusoidal_result_;
+  std::shared_ptr<finger_interfaces::action::Linear::Result> linear_result_;
   finger_interfaces::msg::MotorFeedback motor_feedback_;
 
   double max_vel_;
@@ -734,6 +808,227 @@ private:
 
               // abort action
               goal_handle->abort(sinusoidal_result_);
+
+              // stop action
+              cmd_state_ = CmdState::STOPPING;
+
+            } else {
+              // reset to CANCELLED, try sending again
+              cmd_state_ = CmdState::CANCELLED;
+            }
+          }
+        };
+
+      // send request
+      auto rq = std::make_shared<finger_interfaces::srv::StartStopCommand::Request>();
+      auto result_future = stop_client_->async_send_request(rq, stop_client_callback);
+
+      // idle wait for response
+      cmd_state_ = CmdState::IDLE;
+    }
+
+    if (goal_handle->is_canceling()) {
+      // begin action cancellation
+      if ((cmd_state_ != CmdState::STOPPING) && (cmd_state_ != CmdState::IDLE)) {
+        cmd_state_ = CmdState::CANCELLED;
+      }
+    }
+  }
+
+  void execute_linear_goal(const std::shared_ptr<GoalHandleLinear> goal_handle)
+  {
+    if (cmd_state_ == CmdState::IDLE) {
+      // do nothing, wait for service callbacks to be called
+      RCLCPP_INFO_ONCE(get_logger(), "idling...");
+
+    } else if (cmd_state_ == CmdState::STOPPING) {
+      RCLCPP_INFO(this->get_logger(), "Stopping action...");
+
+      // cancel action timer now that its done
+      action_timer_->cancel();
+
+      // action has been stopped
+      RCLCPP_INFO(this->get_logger(), "Action stopped.");
+
+    } else if (cmd_state_ == CmdState::BEGIN) {
+      RCLCPP_INFO(this->get_logger(), "Executing goal");
+
+      const auto goal = goal_handle->get_goal();
+
+      // initialize linear_result and set as success
+      linear_result_ = std::make_shared<finger_interfaces::action::Linear::Result>();
+      linear_result_->success = 1;
+
+      // convert to arma vecs
+      arma::vec start_vec = {goal->start.at(0), goal->start.at(1), goal->start.at(2)};
+      arma::vec end_vec = {goal->end.at(0), goal->end.at(1), goal->end.at(2)};
+
+      // generate motor trajectory
+      try {
+        q_motor_list_ = generator_->generate_linear(start_vec, end_vec, max_vel_, max_accel_);
+
+      } catch (std::runtime_error & e) {
+        RCLCPP_INFO_STREAM(get_logger(), "Failed to generate motor trajectory.");
+
+        // set result to failed
+        linear_result_->success = 0;
+
+        // abort action
+        goal_handle->abort(linear_result_);
+
+        // stop action timer now that its done
+        cmd_state_ = CmdState::STOPPING;
+      }
+
+      // send trajectories
+      auto rq = std::make_shared<finger_interfaces::srv::SendCommand::Request>();
+      rq->length = int(q_motor_list_.size());
+      rq->repeat = 0;
+
+      for (auto & q : q_motor_list_) {
+        rq->mcp_splay.push_back(q[0]);
+        rq->mcp_flex.push_back(q[1]);
+        rq->pip_flex.push_back(q[2]);
+      }
+
+      auto send_client_callback =
+        [this,
+          goal_handle](rclcpp::Client<finger_interfaces::srv::SendCommand>::SharedFutureWithRequest
+        future)
+        {
+          if (future.get().second->success == 1) {
+            // if successful, move to next stage
+            cmd_state_ = CmdState::RECEIVED;
+
+            // reset message attempt count
+            msg_attempts_ = 0;
+
+          } else {
+            // increment message attempts
+            msg_attempts_++;
+
+            if (msg_attempts_ >= 5) {
+              RCLCPP_INFO_STREAM(get_logger(), "Failed to send 'send' message.");
+
+              // set result to failed
+              linear_result_->success = 0;
+
+              // abort action
+              goal_handle->abort(linear_result_);
+
+              // set state to cancelled to end timer
+              cmd_state_ = CmdState::STOPPING;
+
+            } else {
+              // reset to BEGIN, try sending again
+              cmd_state_ = CmdState::BEGIN;
+            }
+          }
+        };
+
+      // send request
+      auto result_future = send_client_->async_send_request(rq, send_client_callback);
+
+      // idle while we wait for a response
+      cmd_state_ = CmdState::IDLE;
+
+      RCLCPP_INFO(this->get_logger(), "Send request sent goal");
+
+    } else if (cmd_state_ == CmdState::RECEIVED) {
+      RCLCPP_INFO(this->get_logger(), "Data recieved");
+
+      auto start_client_callback =
+        [this,
+          goal_handle](rclcpp::Client<finger_interfaces::srv::StartStopCommand>::
+        SharedFutureWithRequest future) {
+          if (future.get().second->success == 1) {
+            RCLCPP_INFO(this->get_logger(), "Starting");
+
+            // if successful, move to next stage
+            cmd_state_ = CmdState::STARTED;
+
+            // reset message attempt count
+            msg_attempts_ = 0;
+
+          } else {
+            // increment message attempts
+            msg_attempts_++;
+
+            if (msg_attempts_ >= 5) {
+              RCLCPP_INFO_STREAM(get_logger(), "Failed to send 'start' message.");
+
+              // set result to failed
+              linear_result_->success = 0;
+
+              // abort action
+              goal_handle->abort(linear_result_);
+
+              // set state to cancelled to end timer
+              cmd_state_ = CmdState::STOPPING;
+
+            } else {
+              // reset to RECEIVED, try sending again
+              cmd_state_ = CmdState::RECEIVED;
+            }
+          }
+        };
+
+      // send request
+      auto rq = std::make_shared<finger_interfaces::srv::StartStopCommand::Request>();
+      auto result_future = start_client_->async_send_request(rq, start_client_callback);
+
+      // idle wait for response
+      cmd_state_ = CmdState::IDLE;
+
+    } else if (cmd_state_ == CmdState::STARTED) {
+      RCLCPP_INFO_STREAM_ONCE(get_logger(), "Control started...");
+
+      // monitor feedback for stoppage
+      if (motor_feedback_.active < 1e-4 && motor_feedback_.active > -1e-4) {
+        RCLCPP_INFO_STREAM(get_logger(), "Control stopped, stopping action.");
+
+        // if successful, safely stop
+        cmd_state_ = CmdState::STOPPING;
+
+        // assign result to handle
+        goal_handle->succeed(linear_result_);
+
+      } else {
+        RCLCPP_INFO_STREAM_ONCE(get_logger(), "Working...");
+      }
+
+    } else if (cmd_state_ == CmdState::CANCELLED) {
+      RCLCPP_INFO(this->get_logger(), "Cancelling action...");
+
+      auto stop_client_callback =
+        [this,
+          goal_handle](rclcpp::Client<finger_interfaces::srv::StartStopCommand>::
+        SharedFutureWithRequest future) {
+          if (future.get().second->success == 1) {
+            // if successful, safely stop
+            cmd_state_ = CmdState::STOPPING;
+
+            // set result for cancellation
+            linear_result_->success = 0;
+
+            // assign result to handle
+            goal_handle->canceled(linear_result_);
+
+            // reset message attempts count
+            msg_attempts_ = 0;
+
+          } else {
+            // increment message attempts
+            msg_attempts_++;
+
+            if (msg_attempts_ >= 5) {
+              RCLCPP_INFO_STREAM(get_logger(), "Failed to send 'stop' message.");
+
+              // set result to failed
+              linear_result_->success = 0;
+
+              // abort action
+              goal_handle->abort(linear_result_);
 
               // stop action
               cmd_state_ = CmdState::STOPPING;

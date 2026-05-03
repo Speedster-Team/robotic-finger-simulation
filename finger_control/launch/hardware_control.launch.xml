@@ -10,8 +10,10 @@
 
   <node pkg="finger_bridge" exec="hardware_bridge"/>
 
-  <node pkg="finger_planner" exec="finger_planner"/>
-
+  <node pkg="finger_planner" exec="finger_planner">
+    <param from="$(find-pkg-share finger_planner)/config/movement_config.yaml"/>
+  </node>
+  
   <node pkg="finger_control" exec="finger_control"/>
 
 </launch>

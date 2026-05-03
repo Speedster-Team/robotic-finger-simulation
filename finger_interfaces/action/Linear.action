@@ -1,0 +1,7 @@
+# Action message type to generate and command linear joint space motion
+float32[] start     # Array of waypoint start position in joint space (splay, mcp, pip/dip)
+float32[] end       # Array of waypoint end positions in joint space (splay, mcp, pip/dip)
+---
+int32 success
+---
+float32[] state

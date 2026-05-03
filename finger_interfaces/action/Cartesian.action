@@ -1,8 +1,8 @@
 # Action message type to generate and command cartesian motion from finger
 int32 length    # The number of waypoints
-float32[] x     # Array of waypoint x positions
-float32[] y     # Array of waypoint y positions
-float32[] z     # Array of waypoint z positions
+float32[] x     # Array of waypoint x positions in cartesian space
+float32[] y     # Array of waypoint y positions in cartesian space
+float32[] z     # Array of waypoint z positions in cartesian space
 ---
 int32 success
 ---
