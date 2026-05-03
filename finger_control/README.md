@@ -6,7 +6,11 @@
 This packages serves as the high level controller controlling where the finger goes.
 
 ## Launch files
+1. hardware_control.launch.xml
+2. simulation_control.launch.xml
 
-## Design
+## Helpful commands
+1. To cancel a repeating action from the command line use the following service call:
 
-### Topics
+    ros2 service call /<action_name>/_action/cancel_goal action_msgs/srv/CancelGoal
+

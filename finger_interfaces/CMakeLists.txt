@@ -11,6 +11,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 set(action_files
   "action/Cartesian.action"
+  "action/Sinusoidal.action"
 )
 
 set(msg_files

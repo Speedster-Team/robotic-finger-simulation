@@ -1,0 +1,10 @@
+# Action message type to generate and command sinusoidal motion from finger
+int32 repeat    # Boolean to indicate trajectory should be repeated by controller (1 for repeat, 0 for not)
+int32 joint     # The index of the joint to generate the sinusoid for (0, 1, or 2) 
+float32 amp     # The amplitude of the sinusoid (in radians)
+float32 freq    # The frequency of the sinusoid (in Hz)
+float32 v_shift # The vertical shift of the sinusoid (in radians)
+---
+int32 success
+---
+float32[] state
