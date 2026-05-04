@@ -79,24 +79,24 @@ public:
     // sleep for 1 second
     rclcpp::sleep_for(3000ms);
 
-    // send test linear command
-    std::vector<float> start_joint_loc = {0, 0, 0};
-    std::vector<float> end_joint_loc = {0, 1, 0.8};
-    send_linear_goal(start_joint_loc, end_joint_loc);
-    send_linear_goal(end_joint_loc, start_joint_loc);
+    // // send test linear command
+    // std::vector<float> start_joint_loc = {0, 0, 0};
+    // std::vector<float> end_joint_loc = {0, 1, 0.8};
+    // send_linear_goal(start_joint_loc, end_joint_loc);
+    // send_linear_goal(end_joint_loc, start_joint_loc);
 
-    // // send test sinusoidal command
-    send_sinusoid_goal(1, 1, 0.5, 2.0, 0.8);
+    // send test sinusoidal command
+    send_sinusoid_goal(1, 1, 0.5, 0.5, 0.8);
 
-    // send test cartesian command
-    std::vector<float> start = {0, 0.15, -0.05};
-    std::vector<float> end = {0, 0.08, -0.1};
-    std::vector<std::vector<float>> waypoints = {start, end};
-    send_cartesian_goal(waypoints);
+    // // // send test cartesian command
+    // std::vector<float> start = {0, 0.15, -0.05};
+    // std::vector<float> end = {0, 0.08, -0.1};
+    // std::vector<std::vector<float>> waypoints = {start, end};
+    // send_cartesian_goal(waypoints);
 
-    // go back now
-    waypoints = {end, start};
-    send_cartesian_goal(waypoints);
+    // // go back now
+    // waypoints = {end, start};
+    // send_cartesian_goal(waypoints);
   }
 
 private:
