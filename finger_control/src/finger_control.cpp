@@ -80,15 +80,19 @@ public:
     rclcpp::sleep_for(3000ms);
 
     // // send test linear command
-    // std::vector<float> start_joint_loc = {0, 0, 0};
-    // std::vector<float> end_joint_loc = {0, 1, 0.8};
-    // send_linear_goal(start_joint_loc, end_joint_loc);
-    // send_linear_goal(end_joint_loc, start_joint_loc);
+    std::vector<float> start_joint_loc = {0.0, 0.0, 0.0};
+    std::vector<float> end_joint_loc = {0.0, 1.256, 1.256};
+
+    for (auto i = 0; i < 20; i++) {
+      send_linear_goal(start_joint_loc, end_joint_loc);
+      send_linear_goal(end_joint_loc, start_joint_loc);
+    }
+
 
     // send test sinusoidal command
-    send_sinusoid_goal(1, 1, 0.5, 0.5, 0.8);
+    // send_sinusoid_goal(1, 2, 0.7, 2.0, 0.7);
 
-    // // // send test cartesian command
+    // // // send test cartesi2an command
     // std::vector<float> start = {0, 0.15, -0.05};
     // std::vector<float> end = {0, 0.08, -0.1};
     // std::vector<std::vector<float>> waypoints = {start, end};

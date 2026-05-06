@@ -180,7 +180,7 @@ public:
           auto fb = serial_interface_->get_feedback();
 
           // publish feedback to action feedback topic
-          motor_feedback_.motor_positions = std::vector<float>(fb.begin(), fb.begin() + 2);
+          motor_feedback_.motor_positions = std::vector<float>(fb.begin(), fb.begin() + 3);
           motor_feedback_.active = fb.at(3);
           action_feedback_pub_->publish(motor_feedback_);
         }

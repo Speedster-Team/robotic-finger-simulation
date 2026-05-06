@@ -15,5 +15,7 @@
   </node>
 
   <node pkg="finger_control" exec="finger_control" output="screen"/>
+  
+  <node pkg="finger_recorder" exec="record" output="screen"/>
 
 </launch>
