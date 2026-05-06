@@ -16,7 +16,7 @@ setup(
     zip_safe=True,
     maintainer='Mjenz',
     maintainer_email='michael.jenz77@gmail.com',
-    description='TODO: Package description',
+    description='Records finger data.',
     license='MIT',
     extras_require={
         'test': [
@@ -25,6 +25,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'record = finger_recorder.finger_recorder:main',
         ],
     },
 )
