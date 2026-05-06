@@ -7,7 +7,7 @@ reader = rosbag2_py.SequentialReader()
 reader.open(
     rosbag2_py.StorageOptions(
         # place relative path here from src/
-        uri='src/robotic-finger-simulation/finger_recorder/finger_bag_20260506_010247',
+        uri='src/robotic-finger-simulation/finger_recorder/bags/finger_bag_20260506_010247',
         storage_id='mcap'),
     rosbag2_py.ConverterOptions('', ''))
 

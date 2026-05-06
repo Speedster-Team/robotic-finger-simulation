@@ -19,7 +19,7 @@ class FingerRecorder(Node):
         self.writer = rosbag2_py.SequentialWriter()
 
         storage_options = rosbag2_py.StorageOptions(
-            uri = f'src/robotic-finger-simulation/finger_recorder/finger_bag_{datetime.now().strftime("%Y%m%d_%H%M%S")}',
+            uri = f'src/robotic-finger-simulation/finger_recorder/bags/finger_bag_{datetime.now().strftime("%Y%m%d_%H%M%S")}',
             storage_id='mcap')
 
         converter_options = rosbag2_py.ConverterOptions('', '')
